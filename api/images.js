@@ -3,12 +3,6 @@ import fetch from 'node-fetch';
 export default async function handler(req, res) {
   try {
     const { tags = '', page = 0 } = req.query;
-    const limit = 20; // how many images per page
-
-    // Gelbooru API URL format:
-    // https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=...&pid=...
-    // pid = page index, zero-based
-
     const apiUrl = `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=${encodeURIComponent(tags)}&pid=${page}`;
 
     const response = await fetch(apiUrl);
@@ -18,8 +12,6 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // data.post might be an array or a single object
-    // Normalize it to array
     let posts = [];
     if (Array.isArray(data.post)) {
       posts = data.post;
@@ -27,7 +19,6 @@ export default async function handler(req, res) {
       posts = [data.post];
     }
 
-    // Only return necessary fields to frontend for security and simplicity
     const filteredPosts = posts.map(post => ({
       id: post.id,
       preview_url: post.preview_url,
