@@ -3,289 +3,815 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gelbooru Viewer</title>
+  <title>Gelbooru Viewer - Aurora Cascade</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Pacifico&display=swap" rel="stylesheet">
   <style>
+    /* Base Aurora Colors - Dark Theme */
+    :root {
+      --aurora-color-1: #3b004d; /* Deep Violet */
+      --aurora-color-2: #6a008c; /* Royal Purple */
+      --aurora-color-3: #ff2a68; /* Vibrant Pink (Accent) */
+      --aurora-color-4: #e75480; /* Rose Pink (Secondary Accent) */
+      --aurora-color-5: #8f5fff; /* Lavender Blue (Secondary Accent) */
+      --aurora-gradient: radial-gradient(at 20% 10%, var(--aurora-color-2), transparent 50%),
+                         radial-gradient(at 80% 90%, var(--aurora-color-1), transparent 50%),
+                         radial-gradient(at 10% 70%, var(--aurora-color-4), transparent 50%),
+                         radial-gradient(at 90% 30%, var(--aurora-color-5), transparent 50%),
+                         radial-gradient(at 50% 50%, var(--aurora-color-3), transparent 60%);
+
+      /* Glassmorphism Properties */
+      --glass-bg-blur: blur(20px);
+      --glass-bg-color: rgba(30, 0, 45, 0.2); /* Slightly transparent dark purple */
+      --glass-border-color: rgba(255, 255, 255, 0.15); /* Subtle white border */
+      --glass-shadow-color: rgba(0, 0, 0, 0.25); /* Soft shadow for depth */
+
+      /* Text and General UI Colors */
+      --text-color-primary: #fff;
+      --text-color-secondary: #ffb3d2; /* Light pink for accents */
+      --text-shadow-color: rgba(0, 0, 0, 0.4);
+
+      /* Interactive Element Colors */
+      --input-bg: rgba(26, 0, 29, 0.5); /* Slightly transparent input */
+      --input-border: var(--aurora-color-4);
+      --input-focus-border: var(--aurora-color-3);
+      --button-bg: var(--aurora-color-4);
+      --button-hover-bg: var(--aurora-color-3);
+      --button-shadow: var(--aurora-color-4);
+      --button-hover-shadow: var(--aurora-color-3);
+
+      /* Thumbnail Specific */
+      --thumb-bg: rgba(30, 0, 45, 0.3); /* Transparent dark purple */
+      --thumb-border-hover: var(--aurora-color-4);
+      --thumb-shadow: var(--aurora-color-5);
+      --thumb-hover-shadow: var(--aurora-color-3);
+      --tags-gradient-start: var(--aurora-color-4);
+      --thumb-ripple-color: rgba(255, 255, 255, 0.3); /* Ripple effect color for thumbs */
+
+      /* Slideshow/Modal Specific */
+      --overlay-bg: rgba(29, 0, 39, 0.8);
+      --modal-bg: rgba(30, 0, 50, 0.7);
+      --slideshow-button-ripple: rgba(255, 255, 255, 0.2);
+
+      /* Custom Scrollbar */
+      --scrollbar-thumb-bg: var(--aurora-color-4);
+      --scrollbar-thumb-hover-bg: var(--aurora-color-3);
+      --scrollbar-track-bg: rgba(255, 255, 255, 0.05);
+
+      /* Toggle Button Specific */
+      --toggle-theme-bg: #111;
+      --toggle-theme-color: #ff7eb9;
+      --toggle-theme-border: var(--aurora-color-4);
+      --toggle-theme-shadow: var(--aurora-color-4);
+    }
+
+    /* Light Theme Aurora Colors */
+    body.light {
+      --aurora-color-1: #f8e0ff; /* Light Pink-Purple */
+      --aurora-color-2: #e0b0ff; /* Soft Lavender */
+      --aurora-color-3: #ff80b0; /* Light Rose (Accent) */
+      --aurora-color-4: #c06090; /* Muted Rose (Secondary Accent) */
+      --aurora-color-5: #a080ff; /* Light Blue-Violet (Secondary Accent) */
+      --aurora-gradient: radial-gradient(at 20% 10%, var(--aurora-color-2), transparent 50%),
+                         radial-gradient(at 80% 90%, var(--aurora-color-1), transparent 50%),
+                         radial-gradient(at 10% 70%, var(--aurora-color-4), transparent 50%),
+                         radial-gradient(at 90% 30%, var(--aurora-color-5), transparent 50%),
+                         radial-gradient(at 50% 50%, var(--aurora-color-3), transparent 60%);
+
+      /* Light Theme Glassmorphism */
+      --glass-bg-blur: blur(15px); /* Slightly less blur for light theme */
+      --glass-bg-color: rgba(255, 255, 255, 0.3); /* More transparent white */
+      --glass-border-color: rgba(0, 0, 0, 0.1);
+      --glass-shadow-color: rgba(0, 0, 0, 0.1);
+
+      /* Light Theme Text and General UI Colors */
+      --text-color-primary: #333;
+      --text-color-secondary: #804060;
+      --text-shadow-color: rgba(255, 255, 255, 0.6);
+
+      /* Light Theme Interactive Element Colors */
+      --input-bg: rgba(240, 230, 245, 0.7);
+      --input-border: var(--aurora-color-4);
+      --input-focus-border: var(--aurora-color-3);
+      --button-bg: var(--aurora-color-4);
+      --button-hover-bg: var(--aurora-color-3);
+      --button-shadow: var(--aurora-color-4);
+      --button-hover-shadow: var(--aurora-color-3);
+
+      /* Light Theme Thumbnail Specific */
+      --thumb-bg: rgba(255, 255, 255, 0.4);
+      --thumb-border-hover: var(--aurora-color-4);
+      --thumb-shadow: var(--aurora-color-5);
+      --thumb-hover-shadow: var(--aurora-color-3);
+      --tags-gradient-start: var(--aurora-color-4);
+      --thumb-ripple-color: rgba(0, 0, 0, 0.1);
+
+      /* Light Theme Slideshow/Modal Specific */
+      --overlay-bg: rgba(255, 255, 255, 0.85);
+      --modal-bg: rgba(255, 255, 255, 0.8);
+      --slideshow-button-ripple: rgba(0, 0, 0, 0.1);
+
+      /* Light Theme Custom Scrollbar */
+      --scrollbar-thumb-bg: var(--aurora-color-4);
+      --scrollbar-thumb-hover-bg: var(--aurora-color-3);
+      --scrollbar-track-bg: rgba(0, 0, 0, 0.05);
+
+      /* Light Theme Toggle Button Specific */
+      --toggle-theme-bg: #eee;
+      --toggle-theme-color: #333;
+      --toggle-theme-border: var(--aurora-color-4);
+      --toggle-theme-shadow: var(--aurora-color-4);
+    }
+
+    /* Base Styles */
+    html {
+        scroll-behavior: smooth; /* Smooth scrolling for anchor links */
+    }
     body {
       font-family: 'Segoe UI', sans-serif;
       margin: 0;
-      background: linear-gradient(120deg, #190021 0%, #2d0036 100%);
-      color: #fff;
-      transition: background 0.3s, color 0.3s;
+      background-color: var(--aurora-color-1); /* Base background color */
+      background-image: var(--aurora-gradient); /* The Aurora effect */
+      background-size: 300% 300%; /* Make gradients larger for subtle movement */
+      animation: auroraMovement 60s ease infinite alternate; /* Slow, mesmerizing movement */
+      color: var(--text-color-primary);
+      transition: background-color 1s ease, color 0.5s ease; /* Longer transition for base colors */
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden; /* Prevent horizontal scroll from subtle movements */
+      position: relative; /* For ripple effects */
     }
+
+    @keyframes auroraMovement {
+        0% { background-position: 0% 0%; }
+        100% { background-position: 100% 100%; }
+    }
+
+    /* Glassmorphism Base */
+    .glassmorphic {
+      background: var(--glass-bg-color);
+      backdrop-filter: var(--glass-bg-blur);
+      -webkit-backdrop-filter: var(--glass-bg-blur); /* Safari support */
+      border: 1px solid var(--glass-border-color);
+      box-shadow: 0 8px 32px var(--glass-shadow-color);
+      border-radius: 20px; /* Default border radius for glass elements */
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 12px;
+        height: 12px;
+    }
+    ::-webkit-scrollbar-track {
+        background: var(--scrollbar-track-bg);
+        border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb-bg);
+        border-radius: 10px;
+        border: 3px solid transparent;
+        background-clip: padding-box; /* Ensures border is not part of the thumb color */
+        transition: background 0.3s ease-in-out;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-thumb-hover-bg);
+    }
+    /* For Firefox */
+    html {
+        scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-track-bg);
+        scrollbar-width: thin;
+    }
+
+
+    /* Header */
     header {
-      padding: 1rem;
-      background: linear-gradient(90deg, #2d0036 0%, #ff2a68 100%);
-      border-bottom: 3px solid #ff2a68;
-      box-shadow: 0 2px 16px #ff2a6833;
+      background: var(--glass-bg-color);
+      backdrop-filter: var(--glass-bg-blur);
+      -webkit-backdrop-filter: var(--glass-bg-blur);
+      border: 1px solid var(--glass-border-color);
+      box-shadow: 0 8px 32px var(--glass-shadow-color);
+      border-radius: 0 0 20px 20px; /* Rounded bottom corners only */
+      padding: 1.5rem 1rem; /* Slightly more padding */
+      margin-bottom: 1rem; /* Space below header */
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 1rem; /* Increased gap */
       font-family: 'Playfair Display', serif;
       font-size: 1.2em;
+      position: sticky; /* Make header sticky */
+      top: 0;
+      z-index: 100; /* Ensure header is above content */
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3); /* Stronger shadow for sticky header */
     }
     .stats {
-      color: #e75480;
+      color: var(--text-color-secondary);
       font-size: 1.1em;
       font-family: 'Pacifico', cursive;
-      text-shadow: 0 0 8px #e75480bb;
+      text-shadow: 0 0 8px var(--aurora-color-4);
       display: flex;
       align-items: center;
       gap: 0.5em;
+      padding: 0.5em 1em; /* Add padding for better touch/readability */
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05); /* Subtle background for stats */
+      box-shadow: 0 0 5px rgba(255,255,255,0.1);
     }
     .stats::before {
       content: "💋";
       font-size: 1.2em;
       vertical-align: middle;
+      animation: pulse 2s infinite ease-in-out; /* Subtle pulse animation */
     }
+    @keyframes pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.8; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Form Elements (Input, Button, Select) */
     header input, header button, header select {
-      padding: 0.5em;
+      padding: 0.8em 1.5em; /* Generous padding */
       font-size: 1em;
       border: none;
       border-radius: 999px;
       margin: 0 0.2em;
+      transition: all 0.3s ease-in-out; /* Unified transition */
+      outline: none; /* Remove default outline */
+      position: relative; /* For button effects */
+      overflow: hidden; /* For ripple effect */
+      user-select: none; /* Prevent text selection on buttons */
     }
     header input {
-      background: #1a001d;
-      color: #fff;
-      border: 1.5px solid #e75480;
+      background: var(--input-bg);
+      color: var(--text-color-primary);
+      border: 1.5px solid var(--input-border);
       font-family: 'Segoe UI', sans-serif;
-      transition: box-shadow 0.2s;
-      box-shadow: 0 0 6px #e7548077;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2); /* Soft initial shadow */
+      flex-grow: 1;
+      min-width: 180px; /* Increased min-width */
+      padding-left: 1.8em; /* Space for a potential icon */
+    }
+    header input::placeholder {
+      color: rgba(255, 255, 255, 0.6);
     }
     header input:focus {
-      box-shadow: 0 0 18px #ff2a6877;
-      outline: none;
+      border-color: var(--input-focus-border);
+      box-shadow: 0 0 25px var(--aurora-color-3); /* Stronger glow on focus */
+      background: rgba(40, 0, 50, 0.7); /* Darker on focus */
     }
     header button, header select {
-      background: #e75480;
-      color: #fff;
+      background: var(--button-bg);
+      color: var(--text-color-primary);
       font-weight: bold;
-      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-      box-shadow: 0 0 10px #e7548077;
-      border-radius: 999px;
+      box-shadow: 0 0 15px var(--button-shadow); /* Initial button shadow */
       cursor: pointer;
+      white-space: nowrap;
+      text-shadow: var(--text-shadow-color); /* Apply text shadow to buttons */
     }
     header button:hover, header select:hover {
-      background: #ff7eb9;
-      box-shadow: 0 0 30px #ff2a68cc;
-      transform: scale(1.08);
+      background: var(--button-hover-bg);
+      box-shadow: 0 0 40px var(--button-hover-shadow);
+      transform: translateY(-3px) scale(1.03); /* More pronounced lift and scale */
     }
+    header button:active { /* Press down effect */
+      transform: translateY(0) scale(0.98);
+      box-shadow: 0 0 10px var(--button-shadow);
+    }
+    header select {
+        appearance: none; /* Remove default select arrow */
+        background-image: url('data:image/svg+xml;utf8,<svg fill="%23fff" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+        background-repeat: no-repeat;
+        background-position: right 0.8em top 50%;
+        background-size: 1.2em;
+        padding-right: 3em; /* Make space for custom arrow */
+    }
+    header select option { /* Style options for readability */
+        background: var(--input-bg);
+        color: var(--text-color-primary);
+    }
+
+    /* Ripple Effect for Buttons */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: var(--thumb-ripple-color); /* Use a general ripple color */
+      transform: scale(0);
+      animation: ripple 0.6s linear;
+      opacity: 0;
+      pointer-events: none; /* Do not block clicks */
+      z-index: 1; /* Above button content */
+    }
+    @keyframes ripple {
+      to {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+
+    /* Theme Toggle Button */
     #toggleTheme {
-      background: #111;
-      color: #ff7eb9;
-      border: 2px solid #e75480;
-      box-shadow: 0 0 8px #e75480cc;
-      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      background: var(--toggle-theme-bg);
+      color: var(--toggle-theme-color);
+      border: 2px solid var(--toggle-theme-border);
+      box-shadow: 0 0 8px var(--toggle-theme-shadow);
+      transition: background 0.3s ease-in-out, color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
     }
     #toggleTheme:hover {
-      background: #ff7eb9;
-      color: #111;
-      box-shadow: 0 0 16px #e75480;
+      background: var(--toggle-theme-color);
+      color: var(--toggle-theme-bg);
+      box-shadow: 0 0 16px var(--toggle-theme-border);
+    }
+    body.light #toggleTheme { /* Special styling for light theme toggle */
+        background: var(--toggle-theme-bg);
+        color: var(--toggle-theme-color);
+        border-color: var(--toggle-theme-border);
+        box-shadow: 0 0 8px var(--toggle-theme-shadow);
+    }
+    body.light #toggleTheme:hover {
+        background: var(--toggle-theme-color);
+        color: var(--toggle-theme-bg);
+        box-shadow: 0 0 16px var(--toggle-theme-border);
+    }
+
+    /* Main Content */
+    main {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem; /* Padding for main content */
     }
     .gallery {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 18px;
-      padding: 1.5rem;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* Larger base thumbnail size */
+      gap: 25px; /* Increased gap for better visual breathing room */
+      flex-grow: 1;
+      justify-content: center; /* Center items if few */
+      padding: 1rem 0; /* Add some vertical padding inside main */
     }
     .thumb {
-      position: relative;
-      overflow: hidden;
+      background: var(--glass-bg-color);
+      backdrop-filter: var(--glass-bg-blur);
+      -webkit-backdrop-filter: var(--glass-bg-blur);
+      border: 1px solid var(--glass-border-color);
+      box-shadow: 0 8px 32px var(--glass-shadow-color);
       border-radius: 24px;
       cursor: pointer;
-      transition: transform 0.25s, box-shadow 0.25s, border 0.2s;
-      background: #1e1e1e;
+      transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, border 0.3s ease-out, background 0.3s ease-out;
+      background: var(--thumb-bg);
       border: 2.5px solid transparent;
-      box-shadow: 0 0 16px #8f5fff66;
-      will-change: transform;
+      box-shadow: 0 0 20px var(--thumb-shadow); /* More pronounced shadow */
+      will-change: transform, box-shadow;
+      aspect-ratio: 1 / 1.3; /* Slightly taller aspect ratio for images + tags */
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between; /* Push image to top, tags to bottom */
+      overflow: hidden; /* Ensure nothing spills out of rounded corners */
+      position: relative; /* For dynamic glow and parallax */
+      box-shadow: 0 0 25px var(--aurora-color-5); /* Initial aurora glow on thumb */
+      transform-style: preserve-3d; /* Enable 3D transforms for parallax */
     }
+    .thumb::before { /* Dynamic background for aurora glow */
+        content: '';
+        position: absolute;
+        top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: linear-gradient(45deg, var(--aurora-color-3), var(--aurora-color-5), var(--aurora-color-4));
+        background-size: 200% 200%;
+        opacity: 0;
+        filter: blur(30px);
+        transition: opacity 0.5s ease;
+        animation: rotateGlow 15s linear infinite; /* Subtle continuous rotation */
+        z-index: -1; /* Behind content */
+    }
+    .thumb:hover::before {
+        opacity: 0.3; /* Show glow on hover */
+    }
+    @keyframes rotateGlow {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
     .thumb:hover {
-      transform: scale(1.06) rotate(-2deg);
-      border: 2.5px solid #e75480;
-      box-shadow: 0 0 40px #ff2a6888;
+      transform: scale(1.07) rotate(-2deg); /* More aggressive hover effect */
+      border: 2.5px solid var(--thumb-border-hover);
+      box-shadow: 0 0 50px var(--thumb-hover-shadow), 0 0 80px var(--aurora-color-3); /* Multiple shadows for depth and glow */
       z-index: 2;
-      animation: shake 0.25s;
+      animation: shake 0.25s ease-in-out;
     }
     @keyframes shake {
-      0% { transform: scale(1.06) rotate(-2deg) }
-      25% { transform: scale(1.07) rotate(2deg) }
-      50% { transform: scale(1.06) rotate(-2deg) }
-      75% { transform: scale(1.07) rotate(2deg) }
-      100% { transform: scale(1.06) rotate(-2deg) }
+      0% { transform: scale(1.07) rotate(-2deg); }
+      25% { transform: scale(1.08) rotate(2deg); }
+      50% { transform: scale(1.07) rotate(-2deg); }
+      75% { transform: scale(1.08) rotate(2deg); }
+      100% { transform: scale(1.07) rotate(-2deg); }
     }
     .thumb img {
       width: 100%;
-      height: 220px;
+      height: 100%; /* Fill available height */
       object-fit: cover;
-      border-radius: 22px;
-      filter: brightness(0.92) contrast(1.05);
-      transition: filter 0.2s;
+      border-radius: 22px; /* Slightly smaller than thumb for inner border effect */
+      filter: brightness(0.9) contrast(1.05); /* Slightly darker image to pop tags */
+      transition: filter 0.3s ease-in-out, transform 0.1s ease-in-out; /* Added transform for parallax */
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
+      backface-visibility: hidden; /* Prevent flickering on some browsers */
     }
     .thumb:hover img {
-      filter: brightness(1.04) blur(1px) contrast(1.15);
+      filter: brightness(1.0) blur(0.5px) contrast(1.1); /* Slightly brighter and less blur */
+      transform: scale(1.02) translateZ(10px); /* Slight scale and Z-axis for parallax effect */
     }
+
+    /* Thumbnail Skeleton Loader */
+    .thumb.loading .tags { display: none; }
+    .thumb.loading img { display: none; }
+    .thumb.loading {
+        background: linear-gradient(90deg, var(--thumb-bg) 0%, rgba(255,255,255,0.05) 50%, var(--thumb-bg) 100%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border: 2.5px solid rgba(255,255,255,0.1);
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+
     .tags {
-      position: absolute;
+      position: absolute; /* Revert to absolute for overlaying on image */
       bottom: 0;
       width: 100%;
-      background: linear-gradient(0deg, #e75480cc 0%, #00000000 100%);
-      color: #fff;
+      background: linear-gradient(0deg, var(--tags-gradient-start) 0%, #00000000 100%);
+      color: var(--text-color-primary);
       font-size: 1.1em;
-      padding: 7px;
+      padding: 10px; /* More padding for touch */
       box-sizing: border-box;
       border-radius: 0 0 22px 22px;
       letter-spacing: 0.05em;
       font-family: 'Pacifico', cursive;
       display: flex;
+      flex-wrap: wrap; /* Allow tags to wrap */
       align-items: center;
       gap: 0.5em;
+      z-index: 1;
+      text-shadow: 0 0 6px rgba(0,0,0,0.6); /* Stronger text shadow */
+      transform: translateZ(5px); /* Parallax for tags */
     }
     .tags::before {
       content: "✨";
-      color: #ffb3d2;
+      color: var(--text-color-secondary);
       margin-right: 0.3em;
     }
+    .tags span {
+        cursor: pointer;
+        text-decoration: underline;
+        margin-right: 0.3em;
+        transition: color 0.2s ease-in-out, transform 0.1s ease-in-out;
+        font-size: 0.9em; /* Slightly smaller tag text */
+        background: rgba(0,0,0,0.3); /* Slight background for individual tags */
+        padding: 0.2em 0.5em;
+        border-radius: 5px;
+        white-space: nowrap;
+        transform: translateZ(2px); /* Parallax for individual tags */
+    }
+    .tags span:hover {
+        color: var(--text-color-secondary);
+        transform: translateY(-2px); /* Lift effect on hover */
+        text-shadow: 0 0 8px var(--text-color-secondary);
+    }
+    .tags span:active {
+        transform: translateY(0);
+    }
+
+    /* Slideshow */
     #slideshow {
       position: fixed;
       top: 0; left: 0;
       width: 100vw; height: 100vh;
-      background: rgba(29,0,39,0.97);
-      backdrop-filter: blur(8px);
+      background: var(--overlay-bg);
+      backdrop-filter: var(--glass-bg-blur);
+      -webkit-backdrop-filter: var(--glass-bg-blur);
       display: none;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       z-index: 1000;
-      animation: fadeIn 0.5s;
+      animation: fadeIn 0.5s ease-out;
     }
     @keyframes fadeIn {
-      from { opacity: 0;}
-      to { opacity: 1;}
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
     }
     #slideshow.show { display: flex; }
     #slideImg {
       max-width: 90vw;
       max-height: 85vh;
-      border-radius: 18px;
-      box-shadow: 0 0 36px #e7548077;
-      border: 3px solid #ff2a68;
-      transition: opacity 0.3s;
+      border-radius: 25px; /* Larger border-radius */
+      box-shadow: 0 0 40px var(--aurora-color-3), 0 0 80px rgba(255,255,255,0.1); /* Stronger, multiple shadows */
+      border: 3px solid var(--aurora-color-4);
+      transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+      object-fit: contain;
+    }
+    #slideshow.show #slideImg { /* Animation for image appearing in slideshow */
+        animation: slideIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+    @keyframes slideIn {
+        from { opacity: 0; transform: scale(0.8) translateY(20px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
     }
     #slideTags {
-      color: #ffb3d2;
-      margin-top: 1rem;
+      color: var(--text-color-secondary);
+      margin-top: 1.5rem; /* More margin */
       max-width: 80vw;
       text-align: center;
-      font-size: 1.1em;
+      font-size: 1.2em; /* Slightly larger font */
       word-wrap: break-word;
-      text-shadow: 0 0 8px #e75480bb;
+      text-shadow: 0 0 10px var(--aurora-color-4);
       font-family: 'Pacifico', cursive;
       letter-spacing: 0.05em;
+      background: rgba(0,0,0,0.2); /* Subtle background for tags */
+      padding: 0.8em 1.5em;
+      border-radius: 15px;
     }
     .slideshow-controls {
-      margin-top: 0.8rem;
+      margin-top: 1.5rem;
       display: flex;
-      gap: 1rem;
+      gap: 1.5rem; /* Larger gap */
     }
     .slideshow-controls button {
-      background: #e75480;
-      color: #fff;
+      background: var(--button-bg);
+      color: var(--text-color-primary);
       border: none;
-      padding: 0.7rem 1.5rem;
+      padding: 1rem 2rem; /* Larger buttons */
       border-radius: 999px;
-      font-size: 1.5rem;
+      font-size: 1.8rem; /* Larger icon size */
       cursor: pointer;
-      transition: background-color 0.3s, transform 0.1s, box-shadow 0.2s;
-      box-shadow: 0 0 12px #e75480bb;
+      transition: background-color 0.3s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.3s ease-in-out;
+      box-shadow: 0 0 15px var(--button-shadow);
+      text-shadow: var(--text-shadow-color);
+      position: relative; /* For ripple */
+      overflow: hidden; /* For ripple */
     }
     .slideshow-controls button:hover {
-      background: #ff7eb9;
-      transform: scale(1.1);
-      box-shadow: 0 0 28px #e75480cc;
+      background: var(--button-hover-bg);
+      transform: scale(1.12); /* More pronounced scale */
+      box-shadow: 0 0 35px var(--button-hover-shadow), 0 0 60px var(--aurora-color-3);
     }
+    .slideshow-controls button:active {
+        transform: scale(1);
+    }
+
+    /* Info text below gallery */
     .info {
       text-align: center;
-      color: #ff7eb9;
-      margin: 1.2rem;
-      font-size: 16px;
+      color: var(--text-color-secondary);
+      margin: 2rem 0 1.5rem 0; /* Adjusted margins */
+      font-size: 17px;
       font-family: 'Playfair Display', serif;
-      text-shadow: 0 0 6px #e75480cc;
+      text-shadow: 0 0 8px var(--aurora-color-4);
+      padding-bottom: 1em;
+      opacity: 0.8; /* Slightly less prominent */
     }
-    .modal { 
-      display: none; 
-      position: fixed; 
-      z-index: 2000; 
-      left: 0; top: 0; 
+
+    /* Modals (Favorites) */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      left: 0; top: 0;
       width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.7); 
-      align-items: center; 
+      background: var(--overlay-bg);
+      backdrop-filter: var(--glass-bg-blur);
+      -webkit-backdrop-filter: var(--glass-bg-blur);
+      align-items: center;
       justify-content: center;
+      animation: fadeIn 0.4s ease-out;
     }
     .modal.show { display: flex; }
     .modal-content {
-      background: rgba(30,0,50,0.97);
-      color: #fff;
-      padding: 2rem;
-      border-radius: 20px;
-      border: 2.5px solid #ff2a68;
-      box-shadow: 0 0 32px #e75480bb;
-      max-width: 90vw;
-      max-height: 90vh;
+      background: var(--modal-bg);
+      backdrop-filter: var(--glass-bg-blur);
+      -webkit-backdrop-filter: var(--glass-bg-blur);
+      border: 1px solid var(--glass-border-color);
+      box-shadow: 0 8px 32px var(--glass-shadow-color);
+      color: var(--text-color-primary);
+      padding: 2.5rem; /* More padding */
+      border-radius: 25px; /* Larger border radius */
+      max-width: 95vw; /* Increased max width */
+      max-height: 95vh; /* Increased max height */
       overflow: auto;
+      text-align: center;
+      position: relative; /* For close button positioning */
+      animation: slideInFromTop 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     }
-    h2 {
+    @keyframes slideInFromTop {
+        from { opacity: 0; transform: translateY(-50px) scale(0.9); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .modal-content h2 {
       font-family: 'Playfair Display', serif;
-      letter-spacing: 0.08em;
-      color: #ff7eb9;
-      text-shadow: 0 0 6px #e75480cc;
+      letter-spacing: 0.1em; /* More letter spacing */
+      color: var(--text-color-secondary);
+      text-shadow: 0 0 10px var(--aurora-color-4);
       margin-top: 0;
+      margin-bottom: 1.5em; /* More margin */
+      font-size: 2.2em; /* Larger title */
     }
+    .modal-content .gallery {
+      padding: 1rem 0;
+      justify-content: center;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Smaller thumbs for modals */
+      gap: 18px;
+    }
+    .modal-content button {
+        margin-top: 2em; /* More space */
+        padding: 0.9em 2.5em; /* Larger button */
+        font-size: 1.2em;
+        background: var(--button-bg);
+        color: var(--text-color-primary);
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: background 0.3s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.3s ease-in-out;
+        box-shadow: 0 0 15px var(--button-shadow);
+        text-shadow: var(--text-shadow-color);
+    }
+    .modal-content button:hover {
+        background: var(--button-hover-bg);
+        transform: scale(1.05);
+        box-shadow: 0 0 25px var(--button-hover-shadow);
+    }
+    .modal-content button:active {
+        transform: scale(0.98);
+    }
+
+    /* Search Suggestions */
     .suggestions {
-      position: absolute; 
-      background: #333; 
-      color: #fff; 
-      border-radius: 0 0 5px 5px; 
-      z-index: 500; 
-      max-height: 160px; 
-      overflow: auto; 
-      width: 100%; 
-      left: 0; 
-      top: 100%;
-      font-family: 'Segoe UI', sans-serif;
+      background: var(--glass-bg-color);
+      backdrop-filter: var(--glass-bg-blur);
+      -webkit-backdrop-filter: var(--glass-bg-blur);
+      border: 1px solid var(--glass-border-color);
+      box-shadow: 0 8px 32px var(--glass-shadow-color);
+      border-radius: 0 0 15px 15px; /* More rounded bottom */
+      top: calc(100% + 0.5em); /* Position below input with more gap */
+      left: 0.5em;
+      width: calc(100% - 1em);
+      max-height: 200px; /* Increased max height */
+      overflow-y: auto;
       font-size: 1em;
-      box-shadow: 0 3px 12px #e75480aa;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3); /* Stronger shadow */
+      position: absolute;
+      z-index: 99; /* Below header, above other content */
     }
-    .suggestion-item { padding: 0.5em; cursor: pointer; }
-    .suggestion-item:hover, .suggestion-item.active { background: #ff7eb9; color: #222; }
-    @media (max-width:600px) {
-      header { flex-direction: column; }
-      .thumb img { height: 160px; }
-      .modal-content { padding: 1em; }
+    .suggestion-item {
+        padding: 0.8em 1em; /* More padding */
+        cursor: pointer;
+        color: var(--text-color-primary);
+        transition: background 0.2s ease-in-out, color 0.2s ease-in-out;
     }
+    .suggestion-item:hover, .suggestion-item.active {
+        background: var(--button-hover-bg); /* Use button hover color for consistency */
+        color: var(--text-color-primary); /* Keep text white on hover for dark theme */
+        text-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
+    body.light .suggestion-item:hover, body.light .suggestion-item.active {
+        color: #fff; /* White text for light theme hover */
+    }
+
     /* Footer */
     footer {
       text-align: center;
-      color: #ff7eb9;
+      color: var(--text-color-secondary);
       font-family: 'Pacifico', cursive;
-      font-size: 1.2em;
-      margin: 2em 0 1em 0;
-      text-shadow: 0 0 8px #e75480;
+      font-size: 1.3em; /* Slightly larger */
+      margin: 2.5em 0 1.5em 0; /* More margin */
+      text-shadow: 0 0 10px var(--aurora-color-4);
       user-select: none;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.05em;
+      opacity: 0.9;
     }
-    /* Plugin panel styles */
-    #pluginPanel textarea { font-family: monospace; background: #1a001d; color: #ff7eb9; border: 1px solid #e75480; border-radius: 5px; }
-    #pluginPanel button { background: #e75480; color: #fff; border: none; border-radius: 5px; padding: 0.3em 1em; cursor: pointer;}
-    #pluginPanel button:hover { background: #ff7eb9; color: #222; }
+    footer span { /* Company name color */
+        color: var(--text-color-primary);
+        font-family: 'Playfair Display', serif;
+        font-weight: bold;
+        text-shadow: 0 0 5px rgba(255,255,255,0.5);
+    }
+
+
+    /* Plugin Panel */
+    #pluginPanel {
+      background: var(--modal-bg);
+      backdrop-filter: var(--glass-bg-blur);
+      -webkit-backdrop-filter: var(--glass-bg-blur);
+      border: 1px solid var(--glass-border-color);
+      box-shadow: 0 8px 32px var(--glass-shadow-color);
+      position:fixed;bottom:1.5em;right:1.5em;z-index:4000;
+      color: var(--text-color-secondary);
+      padding:2em; /* More padding */
+      border-radius:20px; /* Larger border-radius */
+      box-shadow:0 6px 24px rgba(0,0,0,0.4); /* Stronger shadow */
+      backdrop-filter: blur(15px); /* Stronger blur */
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid rgba(255,255,255,0.15); /* Glass border */
+    }
+    #pluginPanel strong {
+        display: block;
+        margin-bottom: 1em;
+        font-size: 1.2em; /* Larger title */
+        color: var(--text-color-primary);
+        text-shadow: 0 0 8px var(--aurora-color-4);
+        font-family: 'Playfair Display', serif;
+    }
+    #pluginPanel textarea {
+      font-family: monospace;
+      background: var(--input-bg);
+      color: var(--text-color-secondary);
+      border: 1px solid var(--input-border);
+      border-radius: 10px; /* More rounded */
+      padding: 1em; /* More padding */
+      width: 280px; /* Wider text area */
+      resize: vertical;
+      min-height: 80px; /* Minimum height */
+      box-shadow: inset 0 0 8px rgba(0,0,0,0.2); /* Inset shadow */
+      transition: all 0.3s ease-in-out;
+    }
+    #pluginPanel textarea:focus {
+        border-color: var(--input-focus-border);
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.3), 0 0 10px var(--aurora-color-5);
+    }
+    #pluginPanel button {
+      background: var(--button-bg);
+      color: var(--text-color-primary);
+      border: none;
+      border-radius: 999px;
+      padding: 0.8em 2em; /* Larger button */
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out;
+      box-shadow: 0 4px 12px var(--button-shadow);
+      margin-top: 1.2em; /* More margin */
+      text-shadow: var(--text-shadow-color);
+    }
+    #pluginPanel button:hover {
+      background: var(--button-hover-bg);
+      transform: translateY(-4px) scale(1.02); /* More pronounced lift */
+      box-shadow: 0 8px 25px var(--button-hover-shadow), 0 0 40px var(--aurora-color-3);
+    }
+    #pluginPanel button:active {
+        transform: translateY(0);
+    }
+
+
+    /* Media Queries for Responsiveness */
+    @media (max-width:1024px) { /* Tablet adjustments */
+        .gallery { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+        header { padding: 1.2rem 1rem; }
+        header input, header button, header select { padding: 0.7em 1.2em; font-size: 0.95em; }
+        .slideshow-controls button { padding: 0.8rem 1.5rem; font-size: 1.5rem; }
+    }
+    @media (max-width:768px) { /* Smaller tablet and large phone adjustments */
+        header { flex-direction: column; align-items: stretch; gap: 0.8rem; border-radius: 0 0 15px 15px; }
+        header > div { width: 100%; flex-wrap: wrap; justify-content: center; }
+        header input { width: calc(100% - 1em); margin: 0.5em 0.5em; }
+        header button, header select { width: auto; flex-grow: 1; margin: 0.3em; }
+        .gallery { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+        .thumb img { height: 100%; } /* Changed from fixed height */
+        .modal-content { padding: 2em; border-radius: 20px; }
+        .slideshow-controls { flex-wrap: wrap; justify-content: center; gap: 1rem; }
+        .slideshow-controls button { padding: 0.7rem 1.2rem; font-size: 1.3rem; }
+        #pluginPanel { bottom: 1em; right: 1em; padding: 1.5em; border-radius: 15px; }
+        #pluginPanel textarea { width: 250px; }
+        .suggestions { left: 0.5em; width: calc(100% - 1em); }
+    }
+    @media (max-width:480px) { /* Mobile specific adjustments */
+        header { padding: 1rem 0.5rem; gap: 0.5rem; border-radius: 0 0 10px 10px; }
+        header input, header button, header select { padding: 0.6em 1em; font-size: 0.9em; }
+        .gallery { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; padding: 1rem; }
+        .thumb { aspect-ratio: 1 / 1.4; border-radius: 18px; } /* Adjust aspect ratio for very small screens */
+        .thumb img { height: 100%; border-radius: 16px; }
+        .tags { padding: 8px; font-size: 0.9em; border-radius: 0 0 16px 16px; }
+        .tags span { font-size: 0.8em; padding: 0.1em 0.4em; }
+        #slideImg { max-width: 95vw; max-height: 80vh; border-radius: 15px; }
+        #slideTags { font-size: 1em; padding: 0.5em 1em; border-radius: 10px; }
+        .slideshow-controls button { padding: 0.6rem 1rem; font-size: 1.1rem; }
+        .modal-content { padding: 1.5em; border-radius: 15px; }
+        .modal-content h2 { font-size: 1.8em; margin-bottom: 1em; }
+        .modal-content .gallery { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+        .modal-content button { padding: 0.7em 2em; font-size: 1em; margin-top: 1.5em; }
+        #pluginPanel { bottom: 0.5em; right: 0.5em; padding: 1em; border-radius: 10px; }
+        #pluginPanel textarea { width: 180px; min-height: 60px; }
+        #pluginPanel button { padding: 0.6em 1.5em; }
+        .suggestions { left: 0.3em; width: calc(100% - 0.6em); font-size: 0.85em; border-radius: 0 0 10px 10px; }
+    }
+
   </style>
 </head>
 <body>
   <header>
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; flex:1; position:relative;">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; flex:1; position:relative; align-items: center; justify-content: center;">
       <input id="searchInput" placeholder="Search for your next waifu…" aria-label="Search tags" autocomplete="off" aria-autocomplete="list"/>
       <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggested tags"></div>
       <button id="searchBtn" aria-label="Search images by tags">🔎 Search</button>
@@ -321,19 +847,43 @@
       <button id="closeFavs" aria-label="Close favorites modal">Close</button>
     </div>
   </div>
-  <!-- Optional Easter Egg: Press ↑ ↑ ↓ ↓ ← → ← → B A for a surprise! -->
   <footer>
-    Made with ❤️ for waifu lovers &mdash; <span style="color:#fff3;">SLIGHTLY CHILLED WATER</span>
+    Made with ❤️ for waifu lovers &mdash; <span style="color:var(--text-color-primary);">SLIGHTLY CHILLED WATER</span>
   </footer>
 
-  <!-- Plugin Panel -->
-  <div id="pluginPanel" style="position:fixed;bottom:1em;right:1em;z-index:4000;background:#222;color:#ff7eb9;padding:1em;border-radius:12px;box-shadow:0 2px 18px #ff2a6890;">
+  <div id="pluginPanel">
     <strong>Plugins</strong><br>
-    <textarea id="pluginScript" rows="4" style="width:200px;"></textarea><br>
-    <button id="runPlugin" style="margin-top:0.5em;">Run</button>
+    <textarea id="pluginScript" rows="4"></textarea><br>
+    <button id="runPlugin">Run</button>
   </div>
-  
+
   <script defer>
+    // Utility for adding ripple effect
+    function createRipple(event) {
+        const button = event.currentTarget;
+        const circle = document.createElement('span');
+        const diameter = Math.max(button.clientWidth, button.clientHeight);
+        const radius = diameter / 2;
+
+        circle.style.width = circle.style.height = `${diameter}px`;
+        circle.style.left = `${event.clientX - (button.getBoundingClientRect().left + radius)}px`;
+        circle.style.top = `${event.clientY - (button.getBoundingClientRect().top + radius)}px`;
+        circle.classList.add('ripple');
+
+        const ripple = button.getElementsByClassName('ripple')[0];
+        if (ripple) {
+            ripple.remove();
+        }
+        button.appendChild(circle);
+    }
+
+    // Apply ripple effect to all buttons (except theme toggle and input, select)
+    document.querySelectorAll('button').forEach(button => {
+        if (button.id !== 'toggleTheme' && button.tagName !== 'INPUT' && button.tagName !== 'SELECT') {
+            button.addEventListener('click', createRipple);
+        }
+    });
+
     // Theme toggle and cookies
     const toggleTheme = document.getElementById('toggleTheme');
     toggleTheme.addEventListener('click', () => {
@@ -373,7 +923,10 @@
 
     async function fetchTagsSuggest(query) {
       if (!query) return [];
-      return ['catgirl', 'doggirl', 'maid', 'bunny', 'foxgirl', 'elf'].filter(t => t.includes(query.toLowerCase()));
+      // This is a dummy for demonstration. In a real app, you'd fetch from an API.
+      // For more advanced suggestions, you might categorize tags or show popular ones.
+      const allTags = ['catgirl', 'doggirl', 'maid', 'bunny', 'foxgirl', 'elf', 'nekomimi', 'kemonomimi', 'loli', 'succubus', 'monster_girl', 'armor', 'weapon', 'fantasy', 'sci-fi', 'cute', 'sexy', 'bikini', 'school_uniform', 'original', 'long_hair', 'short_hair', 'blonde_hair', 'blue_hair', 'pink_hair', 'swimsuit', 'beach', 'gothic_lolita', 'kimono', 'japanese_clothes', 'animal_ears', 'tail', 'fangs', 'hat', 'glasses', 'uniform', 'dress', 'skirt', 'thigh_highs', 'breasts', 'large_breasts', 'small_breasts', 'flat_chest', 'abs', 'muscles', 'scars', 'tattoo', 'piercing', 'blush', 'smile', 'frown', 'open_mouth', 'closed_eyes', 'heterochromia', 'pointy_ears', 'elf_ears', 'fangs', 'horns', 'wings', 'halo', 'scales', 'fur', 'feathers', 'glowing_eyes', 'magic', 'sword', 'gun', 'shield', 'staff', 'book', 'flower', 'tree', 'moon', 'sun', 'stars', 'cloud', 'water', 'fire', 'ice', 'lightning', 'forest', 'city', 'night', 'day', 'indoor', 'outdoor', 'bedroom', 'kitchen', 'classroom', 'street', 'ocean', 'mountain', 'snow', 'rain', 'wind', 'light', 'dark', 'grayscale', 'monochrome', 'sepia', 'vignette', 'bokeh', 'depth_of_field', 'high_resolution', 'low_resolution', 'blurry', 'sharp', 'colored_lines', 'flat_color', 'detailed_background', 'simple_background', 'no_background', 'solo', 'duo', 'group', 'multiple_girls', 'male', 'male_focus', 'shota', 'trap', 'futanari', 'guro', 'gore', 'vore', 'scat', 'fart', 'chikan', 'public_nudity', 'tentacles', 'slime', 'robot', 'cyborg', 'android', 'mecha', 'vehicle', 'spaceship', 'building', 'ruins', 'abstract', 'texture', 'pattern', 'gradient', 'solid_color', 'geometric_shapes', 'liquid', 'smoke', 'fireworks', 'explosion', 'destruction', 'blood', 'injury', 'medical', 'hospital', 'doctor', 'nurse', 'school', 'student', 'teacher', 'library', 'office', 'restaurant', 'cafe', 'bar', 'club', 'concert', 'festival', 'parade', 'carnival', 'circus', 'amusement_park', 'sport', 'athlete', 'trainer', 'coach', 'referee', 'cheerleader', 'music', 'singer', 'dancer', 'instrument', 'art', 'artist', 'painter', 'sculptor', 'writer', 'photographer', 'film', 'movie', 'actor', 'director', 'game', 'gamer', 'console', 'pc', 'vr', 'anime', 'manga', 'comic', 'webtoon', 'novel', 'book', 'story', 'history', 'mythology', 'folklore', 'legend', 'fairytale', 'urban', 'rural', 'modern', 'ancient', 'futuristic', 'steampunk', 'cyberpunk', 'apocalyptic', 'post-apocalyptic', 'dystopian', 'utopian', 'magic_girl', 'superhero', 'villain', 'monster', 'ghost', 'zombie', 'vampire', 'werewolf', 'dragon', 'unicorn', 'pegasus', 'mermaid', 'siren', 'angel', 'demon', 'devil', 'god', 'goddess', 'king', 'queen', 'prince', 'princess', 'knight', 'soldier', 'wizard', 'witch', 'cleric', 'barbarian', 'rogue', 'assassin', 'pirate', 'cowboy', 'ninja', 'samurai', 'monk', 'paladin', 'druid', 'bard', 'artificer', 'warlock', 'sorcerer', 'fighter', 'ranger', 'druid', 'barbarian', 'rogue', 'assassin', 'pirate', 'cowboy', 'ninja', 'samurai', 'monk', 'paladin', 'druid'];
+      return allTags.filter(t => t.includes(query.toLowerCase())).slice(0, 10); // Limit to 10 suggestions
     }
 
     let suggestActive = -1;
@@ -389,54 +942,128 @@
           div.className = 'suggestion-item';
           div.textContent = s;
           div.setAttribute('role', 'option');
+          div.setAttribute('id', `suggestion-${i}`); // Add ID for accessibility
           div.addEventListener('mousedown', function() {
             document.getElementById('searchInput').value = s;
             suggestionsBox.innerHTML = '';
+            suggestionsBox.style.display = 'none'; // Hide suggestions after selection
+            document.getElementById('searchInput').focus(); // Keep focus on input
           });
           suggestionsBox.appendChild(div);
         });
+        document.getElementById('searchInput').setAttribute('aria-expanded', 'true');
+        document.getElementById('searchInput').setAttribute('aria-controls', 'suggestions');
       } else {
         suggestionsBox.style.display = 'none';
+        document.getElementById('searchInput').setAttribute('aria-expanded', 'false');
       }
     });
     document.getElementById('searchInput').addEventListener('keydown', function(e) {
       const items = suggestionsBox.querySelectorAll('.suggestion-item');
       if (!items.length) return;
+
       if (e.key === 'ArrowDown') {
+        e.preventDefault(); // Prevent cursor movement in input
         suggestActive = (suggestActive + 1) % items.length;
+        items.forEach((item, idx) => {
+          item.classList.toggle('active', idx === suggestActive);
+          if (idx === suggestActive) {
+            item.scrollIntoView({ block: 'nearest' });
+            document.getElementById('searchInput').setAttribute('aria-activedescendant', `suggestion-${idx}`);
+          }
+        });
       } else if (e.key === 'ArrowUp') {
+        e.preventDefault(); // Prevent cursor movement in input
         suggestActive = (suggestActive - 1 + items.length) % items.length;
+        items.forEach((item, idx) => {
+          item.classList.toggle('active', idx === suggestActive);
+          if (idx === suggestActive) {
+            item.scrollIntoView({ block: 'nearest' });
+            document.getElementById('searchInput').setAttribute('aria-activedescendant', `suggestion-${idx}`);
+          }
+        });
       } else if (e.key === 'Enter') {
         if (suggestActive >= 0) {
           e.preventDefault();
           items[suggestActive].dispatchEvent(new Event('mousedown'));
+        } else {
+          // If no suggestion selected, perform search
+          document.getElementById('searchBtn').click();
         }
+      } else if (e.key === 'Escape') {
+          suggestionsBox.innerHTML = '';
+          suggestionsBox.style.display = 'none';
+          document.getElementById('searchInput').setAttribute('aria-expanded', 'false');
       }
-      items.forEach((item, idx) => item.classList.toggle('active', idx === suggestActive));
     });
-    document.addEventListener('click', () => suggestionsBox.innerHTML = '');
+    document.addEventListener('click', (e) => {
+        if (!suggestionsBox.contains(e.target) && e.target !== document.getElementById('searchInput')) {
+            suggestionsBox.innerHTML = '';
+            suggestionsBox.style.display = 'none';
+            document.getElementById('searchInput').setAttribute('aria-expanded', 'false');
+        }
+    });
+
 
     sortSelect.addEventListener('change', () => {
       currentSort = sortSelect.value;
-      page = 0; fetchImages(currentTags, false);
+      page = 0; gallery.innerHTML = ''; fetchImages(currentTags, false); // Clear gallery on sort change
     });
 
     async function fetchImages(tags = currentTags, append = false) {
       if (isLoading) return;
       isLoading = true;
+      // Add skeleton loaders before fetching
+      if (!append) {
+        gallery.innerHTML = ''; // Clear for new search
+        for (let i = 0; i < batchSize; i++) {
+            const div = document.createElement('div');
+            div.className = 'thumb loading'; // Add loading class for shimmer effect
+            gallery.appendChild(div);
+        }
+      }
+
       try {
         const cacheBust = `&_=${Date.now()}`;
-        const res = await fetch(`/api/images?tags=${encodeURIComponent(tags)}&page=${page}&limit=${batchSize}&sort=${currentSort}${cacheBust}`);
-        if (!res.ok) throw new Error('Fetch failure: '+res.status);
+        // Gelbooru API Endpoint (this is a placeholder, you'd replace with a real proxy or direct if CORS allows)
+        // Note: For real use, consider a server-side proxy to handle API keys and rate limits.
+        // Also, Gelbooru's JSON output for /api/index might be nested differently.
+        const res = await fetch(`https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=${encodeURIComponent(tags)}&pid=${page}&limit=${batchSize}&sort=${currentSort}${cacheBust}`);
+
+        if (!res.ok) throw new Error(`Fetch failure: ${res.status} - ${res.statusText}`);
+
         const data = await res.json();
-        const posts = Array.isArray(data.post) ? data.post : [];
-        if (!append) images = [];
+        // Adjust for potential API response structures (e.g., if 'post' is directly an array or nested)
+        const posts = Array.isArray(data.post) ? data.post : (data.post ? [data.post] : []); // Handle single post or no posts
+
+        if (!append) images = []; // Clear images array if not appending
         images = images.concat(posts);
+
         renderImages(posts, append);
-        if (!append) window.addEventListener('scroll', onScroll, { passive: true });
-        if (posts.length === 0) window.removeEventListener('scroll', onScroll);
+
+        // Remove loading skeletons after images are rendered
+        document.querySelectorAll('.thumb.loading').forEach(el => el.remove());
+
+
+        if (!append) { // Only add scroll listener once at the start of a new search
+            window.removeEventListener('scroll', throttledOnScroll); // Remove old listener first
+            window.addEventListener('scroll', throttledOnScroll, { passive: true });
+        }
+        if (posts.length === 0 && append) { // If no more images on infinite scroll, remove listener
+            window.removeEventListener('scroll', throttledOnScroll);
+            // Optionally display a "No more results" message
+            if (document.querySelectorAll('.thumb:not(.loading)').length > 0) {
+                 const noMoreDiv = document.createElement('div');
+                 noMoreDiv.textContent = "No more waifus to discover!";
+                 noMoreDiv.style.cssText = "grid-column: 1 / -1; text-align: center; color: var(--text-color-secondary); padding: 2em; font-family: 'Pacifico', cursive; font-size: 1.5em; text-shadow: 0 0 8px var(--aurora-color-4);";
+                 gallery.appendChild(noMoreDiv);
+            }
+        }
       } catch(e) {
-        showModal('Error', 'Error loading images. Please try again.');
+        console.error("Error fetching images:", e);
+        showModal('Error', 'Error loading images. Please try again later.<br>(' + e.message + ')');
+        // Clear loading skeletons on error as well
+        document.querySelectorAll('.thumb.loading').forEach(el => el.remove());
       } finally {
         isLoading = false;
       }
@@ -444,21 +1071,30 @@
 
     // ---- Make tags clickable ----
     function renderTags(tagString, tagDiv) {
-      const tagArr = tagString.split(' ').slice(0, 4);
+      const tagArr = tagString.split(' ').slice(0, 4); // Limit tags displayed for brevity
       tagDiv.innerHTML = '';
       tagArr.forEach(tag => {
         const tagSpan = document.createElement('span');
         tagSpan.textContent = tag;
-        tagSpan.style.cursor = 'pointer';
-        tagSpan.style.textDecoration = 'underline';
-        tagSpan.style.marginRight = '0.3em';
+        tagSpan.tabIndex = 0; // Make tags focusable
+        tagSpan.setAttribute('role', 'button');
+        tagSpan.setAttribute('aria-label', `Search for ${tag}`);
         tagSpan.addEventListener('click', e => {
-          e.stopPropagation();
+          e.stopPropagation(); // Prevent opening slideshow if clicked within thumbnail
           document.getElementById('searchInput').value = tag;
           localStorage.setItem('lastSearch', tag);
           currentTags = tag;
           page = 0;
+          gallery.innerHTML = ''; // Clear gallery for new search
           fetchImages(tag, false);
+          closeSlide(); // Close slideshow if open
+          favoritesModal.classList.remove('show'); // Close favorites modal if open
+        });
+        tagSpan.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                tagSpan.click();
+            }
         });
         tagDiv.appendChild(tagSpan);
       });
@@ -466,21 +1102,39 @@
 
     function renderImages(posts, append) {
       const frag = document.createDocumentFragment();
+      // If not appending, clear existing non-loading thumbnails
+      if (!append) {
+        document.querySelectorAll('.thumb:not(.loading)').forEach(el => el.remove());
+      }
       posts.forEach(post => {
         const div = document.createElement('div');
         div.className = 'thumb'; div.tabIndex=0;
-        div.role = 'listitem'; div.setAttribute('aria-label', `Tags: ${post.tags}`);
+        div.role = 'listitem'; div.setAttribute('aria-label', `Image with tags: ${post.tags}`);
+
+        // Create image element
         const img = document.createElement('img');
         img.src = post.preview_url || post.sample_url || '';
         img.alt = post.tags || 'Image';
-        img.loading = "lazy";
+        img.loading = "lazy"; // Standard lazy loading
+        img.onload = () => div.classList.remove('loading'); // Remove loading class when image loads
+
+        // Create tags element
         const tagDiv = document.createElement('div');
         tagDiv.className = 'tags';
         renderTags(post.tags, tagDiv); // clickable tags
+
         div.append(img, tagDiv);
         frag.appendChild(div);
       });
-      if (!append) gallery.innerHTML = '';
+
+      // Remove skeleton loaders that were replaced
+      const existingLoaders = gallery.querySelectorAll('.thumb.loading');
+      posts.forEach((_, index) => {
+          if (existingLoaders[index]) {
+              existingLoaders[index].remove();
+          }
+      });
+
       gallery.appendChild(frag);
       seen += posts.length;
       updateStats();
@@ -488,44 +1142,62 @@
 
     gallery.addEventListener('click', e => {
       const thumb = e.target.closest('.thumb');
-      if (thumb) showSlide(Array.prototype.indexOf.call(gallery.children, thumb));
+      if (thumb && !thumb.classList.contains('loading')) { // Prevent click on loading skeletons
+        showSlide(images.findIndex(img => img.preview_url === thumb.querySelector('img').src || img.sample_url === thumb.querySelector('img').src || img.file_url === thumb.querySelector('img').src));
+      }
     });
     gallery.addEventListener('keydown', e => {
-      if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('thumb')) {
+      const thumb = e.target.closest('.thumb');
+      if ((e.key === 'Enter' || e.key === ' ') && thumb && !thumb.classList.contains('loading')) {
         e.preventDefault();
-        showSlide(Array.prototype.indexOf.call(gallery.children, e.target));
+        showSlide(images.findIndex(img => img.preview_url === thumb.querySelector('img').src || img.sample_url === thumb.querySelector('img').src || img.file_url === thumb.querySelector('img').src));
       }
     });
 
     function showSlide(i) {
       const p = images[i];
-      if (!p) return;
+      if (!p) {
+        console.warn("Attempted to show slide for non-existent image at index:", i);
+        return;
+      }
       currentSlide = i;
       slideImg.src = p.file_url || p.sample_url || p.preview_url || '';
       slideImg.alt = 'Tags: '+p.tags;
       slideTags.innerHTML = '';
-      renderTags(p.tags, slideTags);
+      renderTags(p.tags, slideTags); // Render clickable tags in slideshow
       slideshow.classList.add('show');
-      slideshow.focus();
-      slideImg.focus();
+      slideshow.focus(); // Focus on the slideshow container
+      slideImg.focus(); // Ensure image is focusable for accessibility readers
     }
-    const closeSlide = () => slideshow.classList.remove('show');
+    const closeSlide = () => {
+      slideshow.classList.remove('show');
+      // Return focus to the element that opened the slideshow
+      const activeElement = document.querySelector('.thumb[tabindex="0"]:focus') || document.getElementById('searchBtn');
+      if (activeElement) activeElement.focus();
+    };
 
     function toggleFavorite(i) {
       const p = images[i];
       if (!p) return;
       let favs = [];
-      try { favs = JSON.parse(loadCookie('favorites')||'[]'); } catch{}
+      try { favs = JSON.parse(loadCookie('favorites')||'[]'); } catch(e) { console.error("Error parsing favorites:", e); }
       const idx = favs.findIndex(a=>a.id===p.id);
-      if (idx>=0) { favs.splice(idx,1); showModal('Favorites', 'Removed from favorites 🥺'); }
+      if (idx>=0) { favs.splice(idx,1); showModal('Favorites', 'Removed from your harem 🥺'); }
       else { favs.push(p); showModal('Favorites', 'Added to your harem 💖'); }
       saveCookie('favorites', JSON.stringify(favs));
-      updateFavoritesGallery();
+      updateFavoritesGallery(); // Update the favorites gallery immediately
     }
 
     function showModal(title, content) {
       favoritesModal.querySelector('h2').textContent = title;
-      favoritesGallery.innerHTML = `<div style="padding:1em">${content}</div>`;
+      // If content is a string, assume it's a message
+      if (typeof content === 'string') {
+        favoritesGallery.innerHTML = `<div style="padding:1em; color:var(--text-color-primary);">${content}</div>`;
+      } else {
+        // If content is an element (like the actual gallery div), append it
+        favoritesGallery.innerHTML = ''; // Clear previous content
+        favoritesGallery.appendChild(content);
+      }
       favoritesModal.classList.add('show');
       document.getElementById('closeFavs').focus();
     }
@@ -536,15 +1208,76 @@
       document.getElementById('closeFavs').focus();
     }
 
+    // Drag-and-drop for favorites
+    let draggedItem = null;
+    function makeFavoritesDraggable() {
+        favoritesGallery.querySelectorAll('.thumb').forEach(thumb => {
+            thumb.setAttribute('draggable', true);
+            thumb.addEventListener('dragstart', (e) => {
+                draggedItem = thumb;
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', thumb.innerHTML); // Required for Firefox
+                thumb.classList.add('dragging');
+            });
+            thumb.addEventListener('dragend', () => {
+                draggedItem.classList.remove('dragging');
+                draggedItem = null;
+            });
+            thumb.addEventListener('dragover', (e) => {
+                e.preventDefault(); // Necessary to allow drop
+                if (e.target.closest('.thumb') && e.target.closest('.thumb') !== draggedItem) {
+                    e.dataTransfer.dropEffect = 'move';
+                    const targetThumb = e.target.closest('.thumb');
+                    const galleryRect = favoritesGallery.getBoundingClientRect();
+                    const targetRect = targetThumb.getBoundingClientRect();
+
+                    // Determine if dragging before or after the target
+                    const isBefore = e.clientY < targetRect.top + targetRect.height / 2;
+
+                    if (isBefore && favoritesGallery.insertBefore) {
+                        favoritesGallery.insertBefore(draggedItem, targetThumb);
+                    } else if (!isBefore && targetThumb.nextSibling) {
+                        favoritesGallery.insertBefore(draggedItem, targetThumb.nextSibling);
+                    } else if (!isBefore && !targetThumb.nextSibling) {
+                        favoritesGallery.appendChild(draggedItem);
+                    }
+                }
+            });
+            thumb.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (e.target.closest('.thumb') && e.target.closest('.thumb') !== draggedItem) {
+                    // Actual DOM manipulation happened in dragover, now just update underlying data
+                    updateFavoriteOrder();
+                }
+            });
+        });
+    }
+
+    function updateFavoriteOrder() {
+        let favs = [];
+        favoritesGallery.querySelectorAll('.thumb').forEach(thumbElement => {
+            // Find the corresponding original image data based on its source or ID (assuming post.id is unique)
+            const imgSrc = thumbElement.querySelector('img').src;
+            const originalFav = JSON.parse(loadCookie('favorites')||'[]').find(fav =>
+                fav.preview_url === imgSrc || fav.sample_url === imgSrc || fav.file_url === imgSrc
+            );
+            if (originalFav) {
+                favs.push(originalFav);
+            }
+        });
+        saveCookie('favorites', JSON.stringify(favs));
+    }
+
+
     function updateFavoritesGallery() {
       let favs=[];
-      try { favs=JSON.parse(loadCookie('favorites')||'[]'); } catch{}
-      if(!favs.length){ favoritesGallery.innerHTML='<div style="padding:1em">Your harem is empty 🥺 Add some waifus!</div>'; return; }
-      favoritesGallery.innerHTML='';
+      try { favs=JSON.parse(loadCookie('favorites')||'[]'); } catch(e) { console.error("Error parsing favorites:", e); }
+      if(!favs.length){ favoritesGallery.innerHTML='<div style="padding:1em; color:var(--text-color-primary);">Your harem is empty 🥺 Add some waifus!</div>'; return; }
+      favoritesGallery.innerHTML=''; // Clear existing items before rendering
       favs.forEach((post, idx) => {
         const div = document.createElement('div');
         div.className = 'thumb'; div.tabIndex=0;
-        div.role = 'listitem';
+        div.role = 'listitem'; div.setAttribute('aria-label', `Favorite image with tags: ${post.tags}`);
         const img = document.createElement('img');
         img.src = post.preview_url || post.sample_url || '';
         img.alt = post.tags || 'Image';
@@ -552,13 +1285,20 @@
         div.append(img);
         const tagDiv = document.createElement('div');
         tagDiv.className = 'tags';
-        renderTags(post.tags, tagDiv);
+        renderTags(post.tags, tagDiv); // Render clickable tags
         div.append(tagDiv);
         div.addEventListener('click',()=>showFavSlide(idx));
+        div.addEventListener('keydown', e => {
+            if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('thumb')) {
+                e.preventDefault();
+                showFavSlide(idx);
+            }
+        });
         favoritesGallery.appendChild(div);
       });
+      makeFavoritesDraggable(); // Make newly rendered favorites draggable
       function showFavSlide(i) {
-        images = favs;
+        images = favs; // Temporarily change `images` to `favs` for slideshow navigation
         showSlide(i);
       }
     }
@@ -571,7 +1311,12 @@
     document.getElementById('searchBtn').addEventListener('click', () => {
       currentTags = document.getElementById('searchInput').value.trim();
       localStorage.setItem('lastSearch', currentTags); // save search
-      page = 0; fetchImages(currentTags,false);
+      page = 0; // Reset page to 0 for new search
+      // The fetchImages function will now clear the gallery and add skeletons
+      fetchImages(currentTags,false);
+      suggestionsBox.innerHTML = '';
+      suggestionsBox.style.display = 'none';
+      document.getElementById('searchInput').setAttribute('aria-expanded', 'false');
     });
     document.getElementById('favoritesBtn').addEventListener('click', showFavorites);
     document.getElementById('clearFavs').addEventListener('click', () => {
@@ -585,19 +1330,34 @@
 
     window.addEventListener('keydown', e => {
       if (favoritesModal.classList.contains('show') && e.key==='Escape') favoritesModal.classList.remove('show');
-      if (!slideshow.classList.contains('show')) return;
-      if (e.key==='Escape') return closeSlide();
-      if (e.key==='ArrowRight') return showSlide((currentSlide+1)%images.length);
-      if (e.key==='ArrowLeft') return showSlide((currentSlide-1+images.length)%images.length);
-      if (e.key.toLowerCase()==='f') return toggleFavorite(currentSlide);
+      if (!slideshow.classList.contains('show')) return; // Only process if slideshow is active
+      if (e.key==='Escape') { e.preventDefault(); return closeSlide(); }
+      if (e.key==='ArrowRight') { e.preventDefault(); return showSlide((currentSlide+1)%images.length); }
+      if (e.key==='ArrowLeft') { e.preventDefault(); return showSlide((currentSlide-1+images.length)%images.length); }
+      if (e.key.toLowerCase()==='f') { e.preventDefault(); return toggleFavorite(currentSlide); }
     });
 
-    function onScroll() {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+    // Throttling for scroll event for performance
+    function throttle(func, limit) {
+      let inThrottle;
+      return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+          func.apply(context, args);
+          inThrottle = true;
+          setTimeout(() => inThrottle = false, limit);
+        }
+      }
+    }
+    const throttledOnScroll = throttle(function() {
+      // Load more when user is near the bottom
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500 && !isLoading) { // Increased threshold
         page++;
         fetchImages(currentTags,true);
       }
-    }
+    }, 200); // Throttle to once every 200ms
+
 
     window.addEventListener('load', () => {
       const last = parseInt(loadCookie('waifus_seen')||'0',10);
@@ -624,14 +1384,15 @@
     slideImg.addEventListener('touchend', function(e) {
       let dx = touchEndX - touchStartX;
       let dy = touchEndY - touchStartY;
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > swipeThreshold) {
+      // Only consider horizontal swipes, and check against a minimum vertical movement to prevent accidental swipes during scroll attempts
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > swipeThreshold && Math.abs(dy) < 30) { // Added dy check
         if (dx < 0) {
           showSlide((currentSlide + 1) % images.length);
         } else {
           showSlide((currentSlide - 1 + images.length) % images.length);
         }
       }
-      touchStartX = touchEndX = touchStartY = touchEndY = 0;
+      touchStartX = touchEndX = touchStartY = touchEndY = 0; // Reset touch coordinates
     }, { passive: true });
 
     // Easter Egg: Konami code for a surprise
@@ -641,11 +1402,34 @@
       if (e.keyCode === konami[konamiIndex]) {
         konamiIndex++;
         if (konamiIndex === konami.length) {
-          alert('✨ You unlocked Ultra Waifu Mode! (Add your own effect here!)');
-          konamiIndex = 0;
+          alert('✨ You unlocked Ultra Waifu Mode! Initiating plasma core overdrive!');
+          // Example: Dynamic background change
+          document.body.style.animation = 'none'; // Stop current aurora
+          document.body.style.background = 'linear-gradient(45deg, #f06, #06f, #ff0, #0ff, #f0f)';
+          document.body.style.backgroundSize = '400% 400%';
+          document.body.style.animation = 'rainbowAurora 10s ease infinite alternate, fadeIn 1s forwards';
+
+          const elementsToGlow = document.querySelectorAll('header, .thumb, .slideshow-controls button, .modal-content, #pluginPanel');
+          elementsToGlow.forEach(el => {
+            el.style.boxShadow = '0 0 50px rgba(255,255,255,0.7), 0 0 100px #f06, 0 0 150px #06f';
+            el.style.transition = 'box-shadow 0.5s ease-in-out';
+          });
+
+          const style = document.createElement('style');
+          style.id = 'rainbow-aurora-keyframes';
+          style.innerHTML = `
+            @keyframes rainbowAurora {
+              0% { background-position: 0% 0%; }
+              100% { background-position: 100% 100%; }
+            }
+          `;
+          document.head.appendChild(style);
+
+
+          konamiIndex = 0; // Reset for next time
         }
       } else {
-        konamiIndex = 0;
+        konamiIndex = 0; // Reset if sequence is broken
       }
     });
 
@@ -653,10 +1437,13 @@
     document.getElementById('runPlugin').addEventListener('click', function() {
       const code = document.getElementById('pluginScript').value;
       try {
-        new Function(code)();
-        alert('Plugin executed!');
+        // Sandboxed execution of user script for safety (basic level)
+        const userFunction = new Function('console', 'document', 'window', 'alert', 'fetch', 'XMLHttpRequest', 'Image', 'setTimeout', 'setInterval', 'clearInterval', 'clearTimeout', code);
+        userFunction(console, document, window, alert, fetch, XMLHttpRequest, Image, setTimeout, setInterval, clearInterval, clearTimeout);
+        alert('Plugin executed! Check console for output.');
       } catch (e) {
         alert('Plugin error: ' + e.message);
+        console.error('Plugin execution error:', e);
       }
     });
   </script>
