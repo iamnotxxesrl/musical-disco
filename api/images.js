@@ -1,35 +1,42 @@
-import fetch from 'node-fetch';
+const express = require('express');
+const fetch = require('node-fetch');
+const app = express();
+const port = process.env.PORT || 3000;
 
-export default async function handler(req, res) {
+app.get('/api/images', async (req, res) => {
   try {
-    const { tags = '', page = 0 } = req.query;
-    const apiUrl = `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=${encodeURIComponent(tags)}&pid=${page}`;
+    const tags = (req.query.tags || '').split(' ').filter(Boolean).join('+');
+    const page = parseInt(req.query.page) || 0;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
 
-    const response = await fetch(apiUrl);
-    if (!response.ok) {
-      return res.status(500).json({ error: 'Failed to fetch from Gelbooru' });
-    }
+    // Build Gelbooru API URL
+    const url = `https://gelbooru.com/index.php?page=dapi&s=post&q=index&tags=${tags}&pid=${page}&limit=${limit}&json=1`;
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Gelbooru API error ${response.status}`);
 
     const data = await response.json();
 
-    let posts = [];
-    if (Array.isArray(data.post)) {
-      posts = data.post;
-    } else if (data.post) {
-      posts = [data.post];
-    }
+    // Normalize response to match frontend expectations
+    // Gelbooru returns { post: [...] } or empty object if no posts
+    const posts = Array.isArray(data.post) ? data.post : [];
 
-    const filteredPosts = posts.map(post => ({
-      id: post.id,
-      preview_url: post.preview_url,
-      file_url: post.file_url,
-      sample_url: post.sample_url,
-      tags: post.tags,
+    // Map to safer, uniform keys
+    const mappedPosts = posts.map(p => ({
+      id: p.id,
+      tags: p.tags,
+      preview_url: p.preview_url,
+      file_url: p.file_url || p.sample_url,
+      sample_url: p.sample_url,
     }));
 
-    res.status(200).json({ post: filteredPosts });
+    res.json({ post: mappedPosts });
   } catch (error) {
-    console.error('API error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch from Gelbooru API' });
   }
-}
+});
+
+app.listen(port, () => {
+  console.log(`Gelbooru proxy API listening at http://localhost:${port}`);
+});
