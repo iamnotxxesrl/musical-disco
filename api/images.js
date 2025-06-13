@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     const gelbooruUrl = `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=${tags}&pid=${page}&limit=${limit}`;
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 100); // 100ms second timeout
+    const timeout = setTimeout(() => controller.abort(), 1000); // 100ms second timeout
 
     const response = await fetch(gelbooruUrl, { signal: controller.signal });
 
