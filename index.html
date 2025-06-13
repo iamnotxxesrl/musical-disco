@@ -11,6 +11,7 @@
       padding: 0;
       background: #111;
       color: #fff;
+      overflow-y: scroll;
     }
     header {
       padding: 1rem;
@@ -19,9 +20,11 @@
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
+      gap: 0.5rem;
     }
     header input {
-      padding: 0.4em;
+      flex: 1 1 250px;
+      padding: 0.5em;
       font-size: 1em;
       background: #333;
       color: #fff;
@@ -29,13 +32,16 @@
       border-radius: 4px;
     }
     header button {
-      margin-left: 0.5em;
-      padding: 0.4em 0.8em;
+      padding: 0.5em 0.9em;
       background: #444;
       color: #fff;
       border: none;
       border-radius: 6px;
       cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    header button:hover {
+      background: #666;
     }
     .gallery {
       display: grid;
@@ -59,16 +65,20 @@
       height: 220px;
       object-fit: cover;
       display: block;
+      user-select: none;
     }
     .tags {
       position: absolute;
       bottom: 0;
       width: 100%;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.6);
       color: #ccc;
       font-size: 12px;
-      padding: 4px 6px;
+      padding: 6px 8px;
       box-sizing: border-box;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     #slideshow {
       position: fixed;
@@ -82,34 +92,46 @@
       align-items: center;
       flex-direction: column;
       z-index: 1000;
+      padding: 1rem;
+      box-sizing: border-box;
     }
-    #slideshow img {
+    #slideshow.show {
+      display: flex;
+    }
+    #slideImg {
       max-width: 90vw;
       max-height: 85vh;
       border-radius: 12px;
       box-shadow: 0 0 30px #000;
       transition: opacity 0.4s ease;
+      user-select: none;
     }
-    #slideshow.show {
-      display: flex;
-    }
-    #slideshow .details {
+    #slideTags {
       color: #ccc;
-      margin-top: 0.5rem;
+      margin-top: 0.7rem;
       font-size: 14px;
       max-width: 80vw;
       text-align: center;
+      word-wrap: break-word;
+      user-select: text;
     }
     .slideshow-controls {
-      margin-top: 0.5rem;
+      margin-top: 0.8rem;
+      display: flex;
+      gap: 0.5rem;
     }
     .slideshow-controls button {
       background: #444;
       color: #fff;
       border: none;
       padding: 0.5rem 1rem;
-      margin: 0 0.25rem;
       border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      font-size: 1.2rem;
+    }
+    .slideshow-controls button:hover {
+      background: #666;
     }
     .info {
       font-size: 12px;
@@ -120,162 +142,276 @@
     .stats {
       font-size: 14px;
       color: #aaa;
+      min-width: 120px;
+      text-align: center;
+    }
+    /* Responsive tweaks */
+    @media (max-width: 600px) {
+      header {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      header input {
+        width: 100%;
+        flex: none;
+      }
+      header button {
+        flex: 1 1 100%;
+      }
+      .thumb img {
+        height: 160px;
+      }
     }
   </style>
 </head>
 <body>
   <header>
-    <div>
-      <input id="searchInput" placeholder="Search tags..." />
-      <button id="searchBtn">Search</button>
-      <button id="favoritesBtn">Favorites</button>
-      <button id="clearFavs">Clear Favorites</button>
+    <div style="flex-grow:1; display:flex; gap:0.5rem; flex-wrap: wrap;">
+      <input id="searchInput" placeholder="Search tags..." aria-label="Search tags" />
+      <button id="searchBtn" aria-label="Search images">Search</button>
+      <button id="favoritesBtn" aria-label="Show favorites">Favorites</button>
+      <button id="clearFavs" aria-label="Clear favorites">Clear Favorites</button>
     </div>
-    <div class="stats" id="viewStats">Waifus seen: 0</div>
+    <div class="stats" id="viewStats" aria-live="polite" aria-atomic="true">Waifus seen: 0</div>
   </header>
 
-  <div class="gallery" id="gallery"></div>
+  <main>
+    <div class="gallery" id="gallery" role="list" aria-label="Image gallery"></div>
+  </main>
 
-  <div class="info">
+  <div class="info" aria-live="polite" aria-atomic="true">
     This viewer uses cookies for favorites, last searches, and waifu stats. Images auto-load on scroll.
   </div>
 
-  <div id="slideshow">
-    <img id="slideImg" />
+  <div id="slideshow" role="dialog" aria-modal="true" aria-label="Image slideshow">
+    <img id="slideImg" alt="Slideshow image" />
     <div class="details" id="slideTags"></div>
     <div class="slideshow-controls">
-      <button id="prevSlide">⏪</button>
-      <button id="nextSlide">⏩</button>
-      <button id="favoriteSlide">❤️</button>
-      <button id="closeSlideshow">❌</button>
+      <button id="prevSlide" aria-label="Previous image">⏪</button>
+      <button id="nextSlide" aria-label="Next image">⏩</button>
+      <button id="favoriteSlide" aria-label="Toggle favorite">❤️</button>
+      <button id="closeSlideshow" aria-label="Close slideshow">❌</button>
     </div>
   </div>
 
   <script>
-    let page = 0, seen = 0, currentTags = '', images = [], currentSlide = 0;
+    let page = 0,
+        seen = 0,
+        currentTags = '',
+        images = [],
+        currentSlide = 0,
+        isLoading = false,
+        batchSize = 20; // how many images to fetch per request
+
     const gallery = document.getElementById('gallery');
     const slideImg = document.getElementById('slideImg');
     const slideTags = document.getElementById('slideTags');
     const stats = document.getElementById('viewStats');
     const slideshow = document.getElementById('slideshow');
 
+    // Helper: Save cookie with 1 year expiry
     function saveCookie(key, value) {
-      document.cookie = `${key}=${encodeURIComponent(value)};path=/;max-age=31536000`;
+      document.cookie = `${key}=${encodeURIComponent(value)};path=/;max-age=31536000;samesite=lax`;
     }
 
+    // Helper: Load cookie value
     function loadCookie(key) {
       const match = document.cookie.match(new RegExp('(^| )' + key + '=([^;]+)'));
       return match ? decodeURIComponent(match[2]) : null;
     }
 
+    // Update stats display and save
     function updateStats() {
       stats.textContent = `Waifus seen: ${seen}`;
       saveCookie('waifus_seen', seen);
     }
 
+    // Fetch images from backend API
     async function fetchImages(tags = '', append = false) {
-      const res = await fetch(`/api/images?tags=${tags}&page=${page}`);
-      const data = await res.json();
-      const posts = data.post || [];
-      if (!append) images = [];
-      images = images.concat(posts);
-      renderImages(posts, append);
+      if (isLoading) return;
+      isLoading = true;
+
+      try {
+        // Replace '/api/images' with your actual backend API endpoint
+        // Support pagination and tags
+        const res = await fetch(`/api/images?tags=${encodeURIComponent(tags)}&page=${page}&limit=${batchSize}`);
+        if (!res.ok) throw new Error(`Error fetching images: ${res.status}`);
+
+        const data = await res.json();
+
+        const posts = Array.isArray(data.post) ? data.post : (Array.isArray(data) ? data : []);
+        if (!append) images = [];
+        images = images.concat(posts);
+
+        renderImages(posts, append);
+
+        if (posts.length === 0 && page > 0) {
+          // No more images to load
+          window.removeEventListener('scroll', onScroll);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Failed to load images. Please try again later.');
+      } finally {
+        isLoading = false;
+      }
     }
 
+    // Render images thumbnails to gallery
     function renderImages(posts, append) {
       if (!append) gallery.innerHTML = '';
-      posts.forEach((post, idx) => {
+      posts.forEach(post => {
         const div = document.createElement('div');
         div.className = 'thumb';
+        div.setAttribute('role', 'listitem');
+        div.tabIndex = 0;
+        div.setAttribute('aria-label', `Image with tags: ${post.tags}`);
+
         const img = document.createElement('img');
-        img.src = post.preview_url;
-        img.alt = post.tags;
+        img.src = post.preview_url || post.sample_url || '';
+        img.alt = post.tags || 'Image preview';
+
         const tagDiv = document.createElement('div');
         tagDiv.className = 'tags';
-        tagDiv.textContent = post.tags.split(' ').slice(0, 4).join(', ');
+        tagDiv.textContent = post.tags ? post.tags.split(' ').slice(0, 4).join(', ') : '';
+
         div.appendChild(img);
         div.appendChild(tagDiv);
-        div.onclick = () => showSlide(images.indexOf(post));
+
+        // Click and keyboard enter open slideshow
+        div.addEventListener('click', () => showSlide(images.indexOf(post)));
+        div.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            showSlide(images.indexOf(post));
+          }
+        });
+
         gallery.appendChild(div);
       });
       seen += posts.length;
       updateStats();
     }
 
+    // Show image in slideshow
     function showSlide(index) {
       const post = images[index];
       if (!post) return;
       currentSlide = index;
-      slideImg.src = post.file_url || post.sample_url;
-      slideTags.textContent = post.tags;
+      slideImg.src = post.file_url || post.sample_url || post.preview_url || '';
+      slideImg.alt = `Image showing tags: ${post.tags}`;
+      slideTags.textContent = post.tags || '';
       slideshow.classList.add('show');
+      // Focus for accessibility
+      slideshow.focus();
     }
 
+    // Close slideshow
     function closeSlide() {
       slideshow.classList.remove('show');
     }
 
+    // Toggle favorite for current slide image
     function toggleFavorite(index) {
       const post = images[index];
       if (!post) return;
-      const favs = JSON.parse(loadCookie('favorites') || '[]');
+
+      let favs = [];
+      try {
+        favs = JSON.parse(loadCookie('favorites') || '[]');
+      } catch {
+        favs = [];
+      }
+
       const exists = favs.find(p => p.id === post.id);
       if (exists) {
-        const updated = favs.filter(p => p.id !== post.id);
-        saveCookie('favorites', JSON.stringify(updated));
+        favs = favs.filter(p => p.id !== post.id);
         alert('Removed from favorites!');
       } else {
         favs.push(post);
-        saveCookie('favorites', JSON.stringify(favs));
         alert('Added to favorites!');
+      }
+      saveCookie('favorites', JSON.stringify(favs));
+    }
+
+    // Load favorites from cookie and show them
+    function showFavorites() {
+      let favs = [];
+      try {
+        favs = JSON.parse(loadCookie('favorites') || '[]');
+      } catch {
+        favs = [];
+      }
+      if (favs.length === 0) {
+        alert('No favorites saved!');
+        return;
+      }
+      images = favs;
+      renderImages(favs, false);
+      window.removeEventListener('scroll', onScroll);
+    }
+
+    // Clear favorites cookie
+    function clearFavorites() {
+      if (confirm('Are you sure you want to clear all favorites?')) {
+        saveCookie('favorites', '[]');
+        alert('Favorites cleared!');
       }
     }
 
-    // Search & nav
-    document.getElementById('searchBtn').onclick = () => {
-      currentTags = document.getElementById('searchInput').value;
-      page = 0;
-      fetchImages(currentTags);
-    };
-
-    document.getElementById('favoritesBtn').onclick = () => {
-      const favs = JSON.parse(loadCookie('favorites') || '[]');
-      images = favs;
-      renderImages(favs, false);
-    };
-
-    document.getElementById('clearFavs').onclick = () => {
-      saveCookie('favorites', '[]');
-      alert('Favorites cleared!');
-    };
-
-    document.getElementById('closeSlideshow').onclick = closeSlide;
-    document.getElementById('nextSlide').onclick = () => showSlide((currentSlide + 1) % images.length);
-    document.getElementById('prevSlide').onclick = () => showSlide((currentSlide - 1 + images.length) % images.length);
-    document.getElementById('favoriteSlide').onclick = () => toggleFavorite(currentSlide);
-
-    // Infinite Scroll
-    window.addEventListener('scroll', () => {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+    // Infinite scroll handler
+    function onScroll() {
+      if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 100)) {
         page++;
         fetchImages(currentTags, true);
       }
-    });
+    }
 
-    // Keyboard Shortcuts
-    document.addEventListener('keydown', (e) => {
+    // Keyboard shortcuts for slideshow navigation
+    function onKeyDown(e) {
       if (!slideshow.classList.contains('show')) return;
-      if (e.key === 'ArrowRight') showSlide((currentSlide + 1) % images.length);
-      if (e.key === 'ArrowLeft') showSlide((currentSlide - 1 + images.length) % images.length);
-      if (e.key === 'f') toggleFavorite(currentSlide);
-      if (e.key === 'Escape') closeSlide();
+
+      switch (e.key) {
+        case 'ArrowRight':
+          showSlide((currentSlide + 1) % images.length);
+          break;
+        case 'ArrowLeft':
+          showSlide((currentSlide - 1 + images.length) % images.length);
+          break;
+        case 'f':
+        case 'F':
+          toggleFavorite(currentSlide);
+          break;
+        case 'Escape':
+          closeSlide();
+          break;
+      }
+    }
+
+    // Event listeners
+    document.getElementById('searchBtn').addEventListener('click', () => {
+      currentTags = document.getElementById('searchInput').value.trim();
+      page = 0;
+      fetchImages(currentTags, false);
+      window.addEventListener('scroll', onScroll);
     });
 
-    // Load previous state
-    const lastSeen = loadCookie('waifus_seen');
-    if (lastSeen) seen = parseInt(lastSeen);
-    updateStats();
-    fetchImages();
+    document.getElementById('favoritesBtn').addEventListener('click', showFavorites);
+    document.getElementById('clearFavs').addEventListener('click', clearFavorites);
+    document.getElementById('closeSlideshow').addEventListener('click', closeSlide);
+    document.getElementById('nextSlide').addEventListener('click', () => showSlide((currentSlide + 1) % images.length));
+    document.getElementById('prevSlide').addEventListener('click', () => showSlide((currentSlide - 1 + images.length) % images.length));
+    document.getElementById('favoriteSlide').addEventListener('click', () => toggleFavorite(currentSlide));
+    window.addEventListener('keydown', onKeyDown);
+
+    // Initialize on page load
+    window.addEventListener('load', () => {
+      const lastSeen = loadCookie('waifus_seen');
+      if (lastSeen) seen = parseInt(lastSeen, 10) || 0;
+      updateStats();
+      fetchImages();
+      window.addEventListener('scroll', onScroll);
+    });
   </script>
 </body>
 </html>
