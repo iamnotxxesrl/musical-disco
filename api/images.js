@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     const tags = encodeURIComponent(rawTags.replace(/\s+/g, '+'));
 
     const page = parseInt(req.query.page) || 0;
-    const limit = Math.min(parseInt(req.query.limit) || 40, 70); // max 100 posts per request
+    const limit = Math.min(parseInt(req.query.limit) || 50, 70); // max 100 posts per request
 
     const gelbooruUrl = `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=${tags}&pid=${page}&limit=${limit}`;
 
