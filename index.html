@@ -1024,17 +1024,21 @@
       }
 
       try {
-        const cacheBust = `&_=${Date.now()}`;
-        // Gelbooru API Endpoint (this is a placeholder, you'd replace with a real proxy or direct if CORS allows)
-        // Note: For real use, consider a server-side proxy to handle API keys and rate limits.
-        // Also, Gelbooru's JSON output for /api/index might be nested differently.
-        const res = await fetch(`https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=${encodeURIComponent(tags)}&pid=${page}&limit=${batchSize}&sort=${currentSort}${cacheBust}`);
+        // --- THIS IS THE CRUCIAL CHANGE ---
+        // Point to your images.js endpoint
+        // Assuming your images.js is deployed at /api/images
+        const backendUrl = `/api/images?tags=${encodeURIComponent(tags)}&page=${page}&limit=${batchSize}&sort=${currentSort}&source=gelbooru`;
 
-        if (!res.ok) throw new Error(`Fetch failure: ${res.status} - ${res.statusText}`);
+        const res = await fetch(backendUrl);
+
+        if (!res.ok) {
+            const errorData = await res.json(); // Read error message from backend
+            throw new Error(`Backend fetch failure: ${res.status} - ${errorData.error || res.statusText}`);
+        }
 
         const data = await res.json();
-        // Adjust for potential API response structures (e.g., if 'post' is directly an array or nested)
-        const posts = Array.isArray(data.post) ? data.post : (data.post ? [data.post] : []); // Handle single post or no posts
+        // Your images.js mapper already gives us the format we need
+        const posts = data.post || [];
 
         if (!append) images = []; // Clear images array if not appending
         images = images.concat(posts);
@@ -1143,16 +1147,17 @@
     gallery.addEventListener('click', e => {
       const thumb = e.target.closest('.thumb');
       if (thumb && !thumb.classList.contains('loading')) { // Prevent click on loading skeletons
-        showSlide(images.findIndex(img => img.preview_url === thumb.querySelector('img').src || img.sample_url === thumb.querySelector('img').src || img.file_url === thumb.querySelector('img').src));
+        showSlide(images.findIndex(img => img.id === images[gallery.querySelectorAll('.thumb:not(.loading)').indexOf(thumb)].id));
       }
     });
     gallery.addEventListener('keydown', e => {
       const thumb = e.target.closest('.thumb');
       if ((e.key === 'Enter' || e.key === ' ') && thumb && !thumb.classList.contains('loading')) {
         e.preventDefault();
-        showSlide(images.findIndex(img => img.preview_url === thumb.querySelector('img').src || img.sample_url === thumb.querySelector('img').src || img.file_url === thumb.querySelector('img').src));
+        showSlide(images.findIndex(img => img.id === images[gallery.querySelectorAll('.thumb:not(.loading)').indexOf(thumb)].id));
       }
     });
+
 
     function showSlide(i) {
       const p = images[i];
@@ -1255,11 +1260,17 @@
 
     function updateFavoriteOrder() {
         let favs = [];
+        // Map DOM elements back to original image data using their unique ID
         favoritesGallery.querySelectorAll('.thumb').forEach(thumbElement => {
-            // Find the corresponding original image data based on its source or ID (assuming post.id is unique)
-            const imgSrc = thumbElement.querySelector('img').src;
-            const originalFav = JSON.parse(loadCookie('favorites')||'[]').find(fav =>
-                fav.preview_url === imgSrc || fav.sample_url === imgSrc || fav.file_url === imgSrc
+            const thumbIndexInDOM = Array.from(favoritesGallery.children).indexOf(thumbElement);
+            // Assuming `favs` array stores the original post objects, we can re-map by ID.
+            // This is a bit tricky if the original post object isn't directly stored in the DOM element.
+            // A more robust way might be to store the `post.id` in a data attribute on the thumb.
+            // For now, let's assume `favs` is the direct source and re-construct it based on visual order.
+            // This is slightly less efficient but works with the current structure.
+            let existingFavs = JSON.parse(loadCookie('favorites') || '[]');
+            const originalFav = existingFavs.find(fav =>
+                fav.id === parseInt(thumbElement.getAttribute('data-id')) // Assuming data-id attribute is set
             );
             if (originalFav) {
                 favs.push(originalFav);
@@ -1278,6 +1289,8 @@
         const div = document.createElement('div');
         div.className = 'thumb'; div.tabIndex=0;
         div.role = 'listitem'; div.setAttribute('aria-label', `Favorite image with tags: ${post.tags}`);
+        div.setAttribute('data-id', post.id); // Add data-id for easier remapping
+
         const img = document.createElement('img');
         img.src = post.preview_url || post.sample_url || '';
         img.alt = post.tags || 'Image';
