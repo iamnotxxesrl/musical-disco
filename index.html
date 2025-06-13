@@ -3,384 +3,74 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gelbooru Viewer</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Pacifico&display=swap" rel="stylesheet">
+  <title>Musical Disco</title>
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      background: linear-gradient(120deg, #190021 0%, #2d0036 100%);
-      color: #fff;
-      transition: background 0.3s, color 0.3s;
-      min-height: 100vh;
+    body { font-family: sans-serif; background: #181026; color: #fff; margin: 0; }
+    header { background: #302050; padding: 1em; text-align: center; font-size: 1.5em; }
+    .gallery { display: flex; flex-wrap: wrap; gap: 1em; padding: 1em; }
+    .thumb { background: #241a35; padding: 0.5em; border-radius: 10px; width: 180px; }
+    .thumb img { width: 100%; border-radius: 8px; }
+    #adminPanel {
+      position: fixed; top: 1em; right: 1em; z-index: 5000;
+      background: #1a001d; color: #ff7eb9; padding: 1.5em 2.5em;
+      border-radius: 18px; box-shadow: 0 4px 24px #ff2a6890;
+      min-width: 280px;
     }
-    header {
-      padding: 1rem;
-      background: linear-gradient(90deg, #2d0036 0%, #ff2a68 100%);
-      border-bottom: 3px solid #ff2a68;
-      box-shadow: 0 2px 16px #ff2a6833;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      font-family: 'Playfair Display', serif;
-      font-size: 1.2em;
-    }
-    .stats {
-      color: #e75480;
-      font-size: 1.1em;
-      font-family: 'Pacifico', cursive;
-      text-shadow: 0 0 8px #e75480bb;
-      display: flex;
-      align-items: center;
-      gap: 0.5em;
-    }
-    .stats::before {
-      content: "💋";
-      font-size: 1.2em;
-      vertical-align: middle;
-    }
-    header input, header button, header select {
-      padding: 0.5em;
-      font-size: 1em;
-      border: none;
-      border-radius: 999px;
-      margin: 0 0.2em;
-    }
-    header input {
-      background: #1a001d;
-      color: #fff;
-      border: 1.5px solid #e75480;
-      font-family: 'Segoe UI', sans-serif;
-      transition: box-shadow 0.2s;
-      box-shadow: 0 0 6px #e7548077;
-    }
-    header input:focus {
-      box-shadow: 0 0 18px #ff2a6877;
-      outline: none;
-    }
-    header button, header select {
-      background: #e75480;
-      color: #fff;
-      font-weight: bold;
-      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-      box-shadow: 0 0 10px #e7548077;
-      border-radius: 999px;
-      cursor: pointer;
-    }
-    header button:hover, header select:hover {
-      background: #ff7eb9;
-      box-shadow: 0 0 30px #ff2a68cc;
-      transform: scale(1.08);
-    }
-    #toggleTheme {
-      background: #111;
-      color: #ff7eb9;
-      border: 2px solid #e75480;
-      box-shadow: 0 0 8px #e75480cc;
-      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-    }
-    #toggleTheme:hover {
-      background: #ff7eb9;
-      color: #111;
-      box-shadow: 0 0 16px #e75480;
-    }
-    .gallery {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 18px;
-      padding: 1.5rem;
-    }
-    .thumb {
-      position: relative;
-      overflow: hidden;
-      border-radius: 24px;
-      cursor: pointer;
-      transition: transform 0.25s, box-shadow 0.25s, border 0.2s;
-      background: #1e1e1e;
-      border: 2.5px solid transparent;
-      box-shadow: 0 0 16px #8f5fff66;
-      will-change: transform;
-    }
-    .thumb:hover {
-      transform: scale(1.06) rotate(-2deg);
-      border: 2.5px solid #e75480;
-      box-shadow: 0 0 40px #ff2a6888;
-      z-index: 2;
-      animation: shake 0.25s;
-    }
-    @keyframes shake {
-      0% { transform: scale(1.06) rotate(-2deg) }
-      25% { transform: scale(1.07) rotate(2deg) }
-      50% { transform: scale(1.06) rotate(-2deg) }
-      75% { transform: scale(1.07) rotate(2deg) }
-      100% { transform: scale(1.06) rotate(-2deg) }
-    }
-    .thumb img {
-      width: 100%;
-      height: 220px;
-      object-fit: cover;
-      border-radius: 22px;
-      filter: brightness(0.92) contrast(1.05);
-      transition: filter 0.2s;
-    }
-    .thumb:hover img {
-      filter: brightness(1.04) blur(1px) contrast(1.15);
-    }
-    .tags {
-      position: absolute;
-      bottom: 0;
-      width: 100%;
-      background: linear-gradient(0deg, #e75480cc 0%, #00000000 100%);
-      color: #fff;
-      font-size: 1.1em;
-      padding: 7px;
-      box-sizing: border-box;
-      border-radius: 0 0 22px 22px;
-      letter-spacing: 0.05em;
-      font-family: 'Pacifico', cursive;
-      display: flex;
-      align-items: center;
-      gap: 0.5em;
-    }
-    .tags::before {
-      content: "✨";
-      color: #ffb3d2;
-      margin-right: 0.3em;
-    }
-    #slideshow {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(29,0,39,0.97);
-      backdrop-filter: blur(8px);
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      animation: fadeIn 0.5s;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0;}
-      to { opacity: 1;}
-    }
-    #slideshow.show { display: flex; }
-    #slideImg {
-      max-width: 90vw;
-      max-height: 85vh;
-      border-radius: 18px;
-      box-shadow: 0 0 36px #e7548077;
-      border: 3px solid #ff2a68;
-      transition: opacity 0.3s;
-    }
-    #slideTags {
-      color: #ffb3d2;
-      margin-top: 1rem;
-      max-width: 80vw;
-      text-align: center;
-      font-size: 1.1em;
-      word-wrap: break-word;
-      text-shadow: 0 0 8px #e75480bb;
-      font-family: 'Pacifico', cursive;
-      letter-spacing: 0.05em;
-    }
-    .slideshow-controls {
-      margin-top: 0.8rem;
-      display: flex;
-      gap: 1rem;
-    }
-    .slideshow-controls button {
-      background: #e75480;
-      color: #fff;
-      border: none;
-      padding: 0.7rem 1.5rem;
-      border-radius: 999px;
-      font-size: 1.5rem;
-      cursor: pointer;
-      transition: background-color 0.3s, transform 0.1s, box-shadow 0.2s;
-      box-shadow: 0 0 12px #e75480bb;
-    }
-    .slideshow-controls button:hover {
-      background: #ff7eb9;
-      transform: scale(1.1);
-      box-shadow: 0 0 28px #e75480cc;
-    }
-    .info {
-      text-align: center;
-      color: #ff7eb9;
-      margin: 1.2rem;
-      font-size: 16px;
-      font-family: 'Playfair Display', serif;
-      text-shadow: 0 0 6px #e75480cc;
-    }
-    .modal { 
-      display: none; 
-      position: fixed; 
-      z-index: 2000; 
-      left: 0; top: 0; 
-      width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.7); 
-      align-items: center; 
-      justify-content: center;
-    }
-    .modal.show { display: flex; }
-    .modal-content {
-      background: rgba(30,0,50,0.97);
-      color: #fff;
-      padding: 2rem;
-      border-radius: 20px;
-      border: 2.5px solid #ff2a68;
-      box-shadow: 0 0 32px #e75480bb;
-      max-width: 90vw;
-      max-height: 90vh;
-      overflow: auto;
-    }
-    h2 {
-      font-family: 'Playfair Display', serif;
-      letter-spacing: 0.08em;
-      color: #ff7eb9;
-      text-shadow: 0 0 6px #e75480cc;
-      margin-top: 0;
-    }
-    .suggestions {
-      position: absolute; 
-      background: #333; 
-      color: #fff; 
-      border-radius: 0 0 5px 5px; 
-      z-index: 500; 
-      max-height: 160px; 
-      overflow: auto; 
-      width: 100%; 
-      left: 0; 
-      top: 100%;
-      font-family: 'Segoe UI', sans-serif;
-      font-size: 1em;
-      box-shadow: 0 3px 12px #e75480aa;
-    }
-    .suggestion-item { padding: 0.5em; cursor: pointer; }
-    .suggestion-item:hover, .suggestion-item.active { background: #ff7eb9; color: #222; }
+    #adminPanel h3 { margin-top: 0; }
+    #activityPanel { margin-top: 2em; }
+    #activityPanel h4 { margin: 0 0 0.5em 0; }
+    #activityContent ul { margin: 0; padding-left: 1.2em; }
+    #activityContent li { color: #fff; }
     @media (max-width:600px) {
-      header { flex-direction: column; }
-      .thumb img { height: 160px; }
-      .modal-content { padding: 1em; }
+      #adminPanel { min-width: unset; max-width: 98vw; padding: 1em; font-size: 1em;}
     }
-    /* Footer */
-    footer {
-      text-align: center;
-      color: #ff7eb9;
-      font-family: 'Pacifico', cursive;
-      font-size: 1.2em;
-      margin: 2em 0 1em 0;
-      text-shadow: 0 0 8px #e75480;
-      user-select: none;
-      letter-spacing: 0.03em;
-    }
-    /* Plugin panel styles */
-    #pluginPanel textarea { font-family: monospace; background: #1a001d; color: #ff7eb9; border: 1px solid #e75480; border-radius: 5px; }
-    #pluginPanel button { background: #e75480; color: #fff; border: none; border-radius: 5px; padding: 0.3em 1em; cursor: pointer;}
-    #pluginPanel button:hover { background: #ff7eb9; color: #222; }
   </style>
 </head>
 <body>
   <header>
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; flex:1; position:relative;">
-      <input id="searchInput" placeholder="Search for your next waifu…" aria-label="Search tags" autocomplete="off" aria-autocomplete="list"/>
-      <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggested tags"></div>
-      <button id="searchBtn" aria-label="Search images by tags">🔎 Search</button>
-      <select id="sortSelect" aria-label="Sort images">
-        <option value="date">Sort by Date</option>
-        <option value="popular">Sort by Popularity</option>
-        <option value="random">Random</option>
-      </select>
-      <button id="favoritesBtn" aria-label="Show favorites">❤️ Favorites</button>
-      <button id="clearFavs" aria-label="Clear all favorites">🗑️ Clear</button>
-      <button id="toggleTheme" aria-label="Toggle dark and light mode">🌙/☀️</button>
-    </div>
-    <div class="stats" id="viewStats" aria-live="polite">Waifus seen: 0</div>
+    Musical Disco 🎵
   </header>
   <main>
-    <div class="gallery" id="gallery" role="list" aria-label="Image gallery"></div>
+    <div class="gallery" id="gallery">
+      <!-- Your images go here -->
+    </div>
   </main>
-  <div class="info">Uses cookies for favorites and stats. Infinite scroll enabled.</div>
-  <div id="slideshow" role="dialog" aria-modal="true" aria-label="Image slideshow" tabindex="-1">
-    <img id="slideImg" alt="Slideshow image"/>
-    <div id="slideTags"></div>
-    <div class="slideshow-controls">
-      <button id="prevSlide" aria-label="Previous image">⏪</button>
-      <button id="nextSlide" aria-label="Next image">⏩</button>
-      <button id="favoriteSlide" aria-label="Favorite this image">💖</button>
-      <button id="closeSlideshow" aria-label="Close slideshow">❌</button>
-    </div>
-  </div>
-  <div id="favoritesModal" class="modal" role="dialog" aria-modal="true" aria-label="Favorites">
-    <div class="modal-content">
-      <h2>Favorites</h2>
-      <div id="favoritesGallery" class="gallery"></div>
-      <button id="closeFavs" aria-label="Close favorites modal">Close</button>
-    </div>
-  </div>
-  <!-- Optional Easter Egg: Press ↑ ↑ ↓ ↓ ← → ← → B A for a surprise! -->
-  <footer>
-    Made with ❤️ for waifu lovers &mdash; <span style="color:#fff3;">SLIGHTLY CHILLED WATER</span>
-  </footer>
-  <!-- Plugin Panel -->
-  <div id="pluginPanel" style="position:fixed;bottom:1em;right:1em;z-index:4000;background:#222;color:#ff7eb9;padding:1em;border-radius:12px;box-shadow:0 2px 18px #ff2a6890;">
-    <strong>Plugins</strong><br>
-    <textarea id="pluginScript" rows="4" style="width:200px;"></textarea><br>
-    <button id="runPlugin" style="margin-top:0.5em;">Run</button>
-  </div>
-  <!-- ADMIN PANEL will be injected by JS if you are admin -->
-  <script defer>
-    // ... [ALL JS FROM YOUR PREVIOUS INDEX.HTML, unchanged, up to before the admin panel] ...
-    // Paste your original JS up to before the admin panel injection here (see previous completions)
-    // ---- ADMIN PANEL (for IP 190.80.34.73 only) ----
+  <script>
+    // --- ADMIN PANEL (shows only for admin IP) ---
     function createAdminPanel() {
       if (document.getElementById('adminPanel')) return;
       const adminDiv = document.createElement('div');
       adminDiv.id = 'adminPanel';
-      adminDiv.style = 'position:fixed;top:1em;right:1em;z-index:20000;background:#1a001d;color:#ff7eb9;padding:1.5em 2.5em;border-radius:18px;box-shadow:0 4px 24px #ff2a6890;';
       adminDiv.innerHTML = `
-        <h3 style="margin-top:0">Admin Panel</h3>
-        <button id="admin-stats-btn">Show User Stats</button>
-        <button id="admin-clear-cache-btn">Clear API Cache</button>
-        <button id="admin-refresh-images-btn">Refresh Images</button>
-        <button id="admin-delete-image-btn">Delete Current Image</button>
-        <div id="admin-output" style="margin-top:1.2em;font-size:.98em;color:#fff"></div>
+        <h3>Admin Panel</h3>
+        <div id="activityPanel">
+          <h4>Activity Monitor</h4>
+          <div id="activityContent">Loading activity...</div>
+        </div>
       `;
       document.body.appendChild(adminDiv);
 
-      document.getElementById('admin-stats-btn').onclick = async function() {
-        // Example: Fetch stats (implement the endpoint /api/admin/stats in backend!)
-        const r = await fetch('/api/admin/stats');
-        document.getElementById('admin-output').textContent = r.ok ? await r.text() : 'Failed to fetch stats';
-      };
-      document.getElementById('admin-clear-cache-btn').onclick = async function() {
-        const resp = await fetch('/api/admin/clear-cache', { method: 'POST' });
-        document.getElementById('admin-output').textContent = resp.ok ? 'Cache cleared!' : 'Failed to clear cache.';
-      };
-      document.getElementById('admin-refresh-images-btn').onclick = function() {
-        page = 0; fetchImages(currentTags, false);
-        document.getElementById('admin-output').textContent = 'Image gallery refreshed!';
-      };
-      document.getElementById('admin-delete-image-btn').onclick = async function() {
-        // Example: Send delete command for currently viewed image (implement /api/admin/delete-image in backend!)
-        const img = images[currentSlide];
-        if (!img) return document.getElementById('admin-output').textContent = 'No image selected';
-        const resp = await fetch('/api/admin/delete-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: img.id })
-        });
-        document.getElementById('admin-output').textContent = resp.ok ? 'Image deleted!' : 'Failed to delete image.';
-        if (resp.ok) { images.splice(currentSlide, 1); fetchImages(currentTags, false); }
-      };
+      async function updateActivityPanel() {
+        try {
+          const resp = await fetch('/api/admin/activity');
+          if (!resp.ok) throw new Error('Not allowed');
+          const data = await resp.json();
+          let html = `<b>Active users:</b> ${data.count}<br>`;
+          html += `<ul>` + data.users.map(u => `<li>${u}</li>`).join('') + `</ul>`;
+          document.getElementById('activityContent').innerHTML = html;
+        } catch (e) {
+          document.getElementById('activityContent').textContent = 'Failed to load activity';
+        }
+      }
+      updateActivityPanel();
+      setInterval(updateActivityPanel, 10000);
     }
+
+    // Show admin panel only for your IP (replace with your actual admin IP if needed)
     fetch('https://api.ipify.org?format=json')
       .then(r => r.json())
       .then(data => {
-        if (data.ip === '190.80.34.73') {
+        if (data.ip === '190.80.34.73') { // <<--- YOUR ADMIN IP HERE
           createAdminPanel();
         }
       });
