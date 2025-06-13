@@ -1,144 +1,193 @@
 // api/images.js
+// A single, dependency-free backend script for fetching images.
 
-// --- Simple in-memory rate limiter (per IP, per minute) ---
-const rateLimit = {};
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 30; // Max requests per window per IP
+// --- 1. Configuration & Constants ---
 
-function isRateLimited(ip) {
-  const now = Date.now();
-  if (!rateLimit[ip]) rateLimit[ip] = [];
-  // Remove timestamps older than window
-  rateLimit[ip] = rateLimit[ip].filter(ts => now - ts < RATE_LIMIT_WINDOW);
-  if (rateLimit[ip].length >= RATE_LIMIT_MAX) return true;
-  rateLimit[ip].push(now);
-  return false;
-}
+const FETCH_TIMEOUT = 8000; // 8 seconds, crucial for resilience
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes in milliseconds
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 45;
 
-// --- Simple in-memory response cache (per query) ---
+// A modular source configuration makes the code clean and easy to extend.
+const SOURCES = {
+  gelbooru: {
+    buildUrl: ({ tags, page, limit, sort }) => {
+      const sortMap = {
+        popular: 'sort:score:desc',
+        date: 'sort:id:desc',
+        random: 'sort:random',
+      };
+      const url = new URL('https://gelbooru.com/index.php');
+      url.search = new URLSearchParams({
+        page: 'dapi',
+        s: 'post',
+        q: 'index',
+        json: 1,
+        tags: `${tags} ${sortMap[sort] || sortMap.date}`,
+        pid: page,
+        limit,
+      }).toString();
+      return url.href;
+    },
+    mapper: (post) => ({
+      id: post.id ?? null,
+      tags: post.tags || '',
+      preview_url: post.preview_url || '',
+      file_url: post.file_url || '',
+      sample_url: post.sample_url || '',
+    }),
+    getPosts: (data) => Array.isArray(data?.post) ? data.post : [],
+  },
+  danbooru: {
+    buildUrl: ({ tags, page, limit, sort }) => {
+      const sortMap = {
+        popular: 'order:rank',
+        date: 'order:id',
+        random: 'order:random'
+      };
+      const url = new URL('https://danbooru.donmai.us/posts.json');
+      url.search = new URLSearchParams({
+        tags: `${tags} ${sortMap[sort] || sortMap.date}`,
+        page: page + 1, // Danbooru pages are 1-based
+        limit,
+      }).toString();
+      return url.href;
+    },
+    mapper: (post) => ({
+      id: post.id ?? null,
+      tags: post.tag_string || '',
+      preview_url: post.preview_file_url || '',
+      file_url: post.file_url || '',
+      sample_url: post.large_file_url || '',
+    }),
+    getPosts: (data) => Array.isArray(data) ? data : [],
+  },
+};
+
+
+// --- 2. In-Memory Services (Optimized for Serverless) ---
+// NOTE: In a serverless environment, this state is NOT shared globally but is reused
+// by "warm" function instances, making it effective for handling short-term bursts of traffic.
+
 const cache = new Map();
-const CACHE_TTL = 60 * 1000; // 1 minute
-
-function getCache(key) {
+function getFromCache(key) {
   const entry = cache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.ts > CACHE_TTL) {
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
     cache.delete(key);
     return null;
   }
   return entry.value;
 }
-
-function setCache(key, value) {
-  cache.set(key, { value, ts: Date.now() });
+function setInCache(key, value) {
+  cache.set(key, { value, timestamp: Date.now() });
 }
 
-// --- Tag sanitization: only safe characters, limit tag count ---
+const rateLimiter = new Map();
+function isRateLimited(ip) {
+  const now = Date.now();
+  let record = rateLimiter.get(ip);
+
+  // If record is old or doesn't exist, create a new one
+  if (!record || now - record.timestamp > RATE_LIMIT_WINDOW_MS) {
+    record = { count: 1, timestamp: now };
+    rateLimiter.set(ip, record);
+    return false;
+  }
+
+  // If record is still valid, increment and check against the limit
+  record.count++;
+  if (record.count > RATE_LIMIT_MAX_REQUESTS) {
+    return true;
+  }
+  
+  rateLimiter.set(ip, record);
+  return false;
+}
+
+
+// --- 3. Utilities ---
+
 function sanitizeTags(raw) {
-  // Only allow alphanumeric, underscore, colon, dash (safe for Gelbooru)
-  const allowed = /^[\w:-]+$/;
+  const allowed = /^[\w:-]+$/; // Allow letters, numbers, underscore, colon, dash
   return raw
     .split(' ')
-    .map(tag => tag.trim())
-    .filter(tag => tag && allowed.test(tag))
-    .slice(0, 6) // Limit to 6 tags
-    .join('+');
+    .map(t => t.trim().toLowerCase())
+    .filter(t => t && allowed.test(t))
+    .slice(0, 6) // Limit to 6 tags for API sanity
+    .join(' ');
 }
 
-// --- Main handler ---
+async function fetchWithTimeout(url, options = {}, timeout = FETCH_TIMEOUT) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+
+// --- 4. Main Exported Handler ---
+
 export default async function handler(req, res) {
   try {
-    // Rate limiting
-    const ip =
-      req.headers['x-forwarded-for']?.split(',')[0] ||
-      req.connection?.remoteAddress ||
-      '';
+    // Determine client IP for rate limiting, prioritizing common proxy headers
+    const ip = req.headers['x-vercel-forwarded-for'] || req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress || '';
     if (isRateLimited(ip)) {
-      return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+      return res.status(429).json({ error: 'Too many requests. Please calm down.' });
     }
 
-    // Input validation: page and limit
+    // Validate and sanitize all inputs
+    const sourceKey = req.query.source === 'danbooru' ? 'danbooru' : 'gelbooru';
+    const sourceConfig = SOURCES[sourceKey];
+    
     const page = parseInt(req.query.page, 10);
     const limit = parseInt(req.query.limit, 10);
+    const sort = ['popular', 'date', 'random'].includes(req.query.sort) ? req.query.sort : 'date';
+
     const safePage = Number.isInteger(page) && page >= 0 ? page : 0;
-    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 40; // Default is now 40
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 100) : 20;
+    const tags = sanitizeTags(typeof req.query.tags === 'string' ? req.query.tags : '');
 
-    // Tag sanitization
-    const rawTags = typeof req.query.tags === 'string' ? req.query.tags : '';
-    const tags = sanitizeTags(rawTags);
-
-    // Source selection (default: gelbooru)
-    const source = req.query.source === 'danbooru' ? 'danbooru' : 'gelbooru';
-
-    // Cache key should include source
-    const cacheKey = `${source}-${tags}-${safePage}-${safeLimit}`;
-    const cached = getCache(cacheKey);
-    if (cached) {
-      return res.status(200).json({ post: cached });
+    // Check cache first
+    const cacheKey = `images:${sourceKey}:${tags}:${sort}:${safePage}:${safeLimit}`;
+    const cachedData = getFromCache(cacheKey);
+    if (cachedData) {
+      res.setHeader('X-Cache-Status', 'HIT');
+      return res.status(200).json(cachedData);
     }
+    res.setHeader('X-Cache-Status', 'MISS');
 
-    // Build API URL
-    let url;
-    if (source === 'danbooru') {
-      // Danbooru: pages are 1-based, not 0-based
-      url = `https://danbooru.donmai.us/posts.json?tags=${encodeURIComponent(tags)}&page=${safePage + 1}&limit=${safeLimit}`;
-    } else {
-      // Gelbooru
-      url = `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=${encodeURIComponent(tags)}&pid=${safePage}&limit=${safeLimit}`;
-    }
+    // Fetch from the selected source API
+    const apiUrl = sourceConfig.buildUrl({ tags, page: safePage, limit: safeLimit, sort });
+    const response = await fetchWithTimeout(apiUrl);
 
-    // Fetch from API
-    const response = await fetch(url);
-    const contentType = response.headers.get('content-type') || '';
     if (!response.ok) {
-      const errText = contentType.includes('application/json')
-        ? JSON.stringify(await response.json())
-        : await response.text();
-      console.error(`${source} error:`, response.status, errText);
-      return res.status(response.status).json({ error: `${source} responded with status ${response.status}` });
+      console.error(`${sourceKey} API error:`, { status: response.status, url: apiUrl });
+      return res.status(response.status).json({ error: `${sourceKey} API returned an error.` });
     }
 
-    // Parse JSON, handle errors
-    let data;
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      console.error(`Failed to parse ${source} JSON:`, parseError);
-      return res.status(502).json({ error: `${source} returned invalid JSON.` });
-    }
-
-    // Data mapping
-    let posts, mapped;
-    if (source === 'danbooru') {
-      posts = Array.isArray(data) ? data : [];
-      mapped = posts.map(p => ({
-        id: p.id ?? null,
-        tags: p.tag_string || '',
-        preview_url: p.preview_file_url ? `https://danbooru.donmai.us${p.preview_file_url}` : '',
-        file_url: p.file_url ? `https://danbooru.donmai.us${p.file_url}` : '',
-        sample_url: p.large_file_url ? `https://danbooru.donmai.us${p.large_file_url}` : ''
-      }));
-    } else {
-      posts = Array.isArray(data?.post)
-        ? data.post
-        : (data?.post ? [data.post] : []);
-      mapped = posts.map(p => ({
-        id: p.id ?? null,
-        tags: p.tags || '',
-        preview_url: p.preview_url || '',
-        file_url: p.file_url || p.sample_url || '',
-        sample_url: p.sample_url || ''
-      }));
-    }
-
-    // Store in cache
-    setCache(cacheKey, mapped);
-
-    // Respond
-    return res.status(200).json({ post: mapped });
+    const data = await response.json();
+    const posts = sourceConfig.getPosts(data);
+    const mapped = posts.map(sourceConfig.mapper);
+    
+    const responseData = { post: mapped };
+    setInCache(cacheKey, responseData);
+    
+    return res.status(200).json(responseData);
 
   } catch (error) {
-    console.error('Fetch failed:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    if (error.name === 'AbortError') {
+      console.error('Upstream API request timed out:', error);
+      return res.status(504).json({ error: 'The request to the image provider timed out.' });
+    }
+    console.error('Internal Server Error:', error);
+    return res.status(500).json({ error: 'An unexpected error occurred.' });
   }
 }
