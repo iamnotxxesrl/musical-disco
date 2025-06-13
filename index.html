@@ -3,22 +3,67 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gelbooru Viewer</title>
+  <title>Advanced Gelbooru Viewer</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Pacifico&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg-grad-start: #190021;
+      --bg-grad-end: #2d0036;
+      --header-grad-start: #2d0036;
+      --header-grad-end: #ff2a68;
+      --primary: #e75480;
+      --primary-hover: #ff7eb9;
+      --primary-shadow: #ff2a6899;
+      --text: #fff;
+      --text-muted: #ffb3d2;
+      --input-bg: #1a001d;
+      --thumb-bg: #1e1e1e;
+      --thumb-shadow: #8f5fff66;
+      --thumb-border-hover: #e75480;
+      --modal-bg: rgba(30,0,50,0.97);
+      --scanline-opacity: 0;
+    }
+    body.light {
+      --bg-grad-start: #fdf6ff;
+      --bg-grad-end: #e8e6f3;
+      --header-grad-start: #f8cdda;
+      --header-grad-end: #a252a2;
+      --primary: #b363a3;
+      --primary-hover: #d382c3;
+      --primary-shadow: #a252a266;
+      --text: #2c2c2c;
+      --text-muted: #a252a2;
+      --input-bg: #fff;
+      --thumb-bg: #fff;
+      --thumb-shadow: #a252a233;
+      --thumb-border-hover: #b363a3;
+      --modal-bg: rgba(240, 230, 250, 0.97);
+    }
     body {
       font-family: 'Segoe UI', sans-serif;
       margin: 0;
-      background: linear-gradient(120deg, #190021 0%, #2d0036 100%);
-      color: #fff;
-      transition: background 0.3s, color 0.3s;
+      background: linear-gradient(120deg, var(--bg-grad-start) 0%, var(--bg-grad-end) 100%);
+      color: var(--text);
+      transition: background 0.4s, color 0.4s;
       min-height: 100vh;
+      position: relative;
+    }
+    body::after { /* Scanline effect for easter egg */
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+      background-size: 100% 4px, 6px 100%;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: var(--scanline-opacity);
+      transition: opacity 0.5s;
     }
     header {
       padding: 1rem;
-      background: linear-gradient(90deg, #2d0036 0%, #ff2a68 100%);
-      border-bottom: 3px solid #ff2a68;
-      box-shadow: 0 2px 16px #ff2a6833;
+      background: linear-gradient(90deg, var(--header-grad-start) 0%, var(--header-grad-end) 100%);
+      border-bottom: 3px solid var(--primary);
+      box-shadow: 0 2px 16px var(--primary-shadow);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -26,268 +71,176 @@
       gap: 0.5rem;
       font-family: 'Playfair Display', serif;
       font-size: 1.2em;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
     .stats {
-      color: #e75480;
+      color: var(--primary-hover);
       font-size: 1.1em;
       font-family: 'Pacifico', cursive;
-      text-shadow: 0 0 8px #e75480bb;
+      text-shadow: 0 0 8px var(--primary-shadow);
       display: flex;
       align-items: center;
       gap: 0.5em;
     }
-    .stats::before {
-      content: "💋";
-      font-size: 1.2em;
-      vertical-align: middle;
-    }
+    .stats::before { content: "💋"; font-size: 1.2em; vertical-align: middle; }
     header input, header button, header select {
-      padding: 0.5em;
-      font-size: 1em;
-      border: none;
-      border-radius: 999px;
-      margin: 0 0.2em;
+      padding: 0.5em; font-size: 1em; border: none; border-radius: 999px; margin: 0 0.2em;
     }
     header input {
-      background: #1a001d;
-      color: #fff;
-      border: 1.5px solid #e75480;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1.5px solid var(--primary);
       font-family: 'Segoe UI', sans-serif;
-      transition: box-shadow 0.2s;
-      box-shadow: 0 0 6px #e7548077;
+      transition: box-shadow 0.2s, background 0.4s, color 0.4s;
+      box-shadow: 0 0 6px var(--primary-shadow);
     }
-    header input:focus {
-      box-shadow: 0 0 18px #ff2a6877;
-      outline: none;
-    }
+    header input:focus { box-shadow: 0 0 18px var(--primary-shadow); outline: none; }
     header button, header select {
-      background: #e75480;
-      color: #fff;
-      font-weight: bold;
+      background: var(--primary); color: #fff; font-weight: bold;
       transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-      box-shadow: 0 0 10px #e7548077;
-      border-radius: 999px;
-      cursor: pointer;
+      box-shadow: 0 0 10px var(--primary-shadow); cursor: pointer;
     }
-    header button:hover, header select:hover {
-      background: #ff7eb9;
-      box-shadow: 0 0 30px #ff2a68cc;
-      transform: scale(1.08);
-    }
+    header button:hover, header select:hover { background: var(--primary-hover); box-shadow: 0 0 30px var(--primary-shadow); transform: scale(1.08); }
     #toggleTheme {
-      background: #111;
-      color: #ff7eb9;
-      border: 2px solid #e75480;
-      box-shadow: 0 0 8px #e75480cc;
-      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      background: #111; color: #ff7eb9; border: 2px solid var(--primary); box-shadow: 0 0 8px var(--primary-shadow);
     }
-    #toggleTheme:hover {
-      background: #ff7eb9;
-      color: #111;
-      box-shadow: 0 0 16px #e75480;
-    }
+    #toggleTheme:hover { background: var(--primary-hover); color: #111; box-shadow: 0 0 16px var(--primary); }
     .gallery {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 18px;
-      padding: 1.5rem;
+      gap: 18px; padding: 1.5rem;
     }
     .thumb {
-      position: relative;
-      overflow: hidden;
-      border-radius: 24px;
-      cursor: pointer;
+      position: relative; overflow: hidden; border-radius: 24px; cursor: pointer;
       transition: transform 0.25s, box-shadow 0.25s, border 0.2s;
-      background: #1e1e1e;
+      background: var(--thumb-bg);
       border: 2.5px solid transparent;
-      box-shadow: 0 0 16px #8f5fff66;
+      box-shadow: 0 0 16px var(--thumb-shadow);
       will-change: transform;
     }
-    .thumb:hover {
-      transform: scale(1.06) rotate(-2deg);
-      border: 2.5px solid #e75480;
-      box-shadow: 0 0 40px #ff2a6888;
-      z-index: 2;
-      animation: shake 0.25s;
-    }
+    .thumb:hover { transform: scale(1.06) rotate(-2deg); border-color: var(--thumb-border-hover); box-shadow: 0 0 40px var(--primary-shadow); z-index: 2; animation: shake 0.25s; }
     @keyframes shake {
-      0% { transform: scale(1.06) rotate(-2deg) }
-      25% { transform: scale(1.07) rotate(2deg) }
-      50% { transform: scale(1.06) rotate(-2deg) }
-      75% { transform: scale(1.07) rotate(2deg) }
-      100% { transform: scale(1.06) rotate(-2deg) }
+      0%, 100% { transform: scale(1.06) rotate(-2deg); }
+      50% { transform: scale(1.07) rotate(2deg); }
     }
     .thumb img {
-      width: 100%;
-      height: 220px;
-      object-fit: cover;
-      border-radius: 22px;
-      filter: brightness(0.92) contrast(1.05);
-      transition: filter 0.2s;
+      width: 100%; height: 220px; object-fit: cover; border-radius: 22px;
+      filter: brightness(0.92) contrast(1.05); transition: filter 0.2s, transform 0.3s;
     }
-    .thumb:hover img {
-      filter: brightness(1.04) blur(1px) contrast(1.15);
-    }
+    .thumb:hover img { filter: brightness(1.04) blur(1px) contrast(1.15); transform: scale(1.1); }
     .tags {
-      position: absolute;
-      bottom: 0;
-      width: 100%;
-      background: linear-gradient(0deg, #e75480cc 0%, #00000000 100%);
-      color: #fff;
-      font-size: 1.1em;
-      padding: 7px;
-      box-sizing: border-box;
-      border-radius: 0 0 22px 22px;
-      letter-spacing: 0.05em;
-      font-family: 'Pacifico', cursive;
-      display: flex;
-      align-items: center;
-      gap: 0.5em;
+      position: absolute; bottom: 0; width: 100%;
+      background: linear-gradient(0deg, var(--primary) 0%, #00000000 100%);
+      color: #fff; font-size: 0.9em; padding: 12px 7px 7px 7px; box-sizing: border-box;
+      border-radius: 0 0 22px 22px; letter-spacing: 0.05em;
+      font-family: 'Pacifico', cursive; display: flex; align-items: center; gap: 0.5em;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .tags::before {
-      content: "✨";
-      color: #ffb3d2;
-      margin-right: 0.3em;
-    }
+    .tags::before { content: "✨"; color: var(--text-muted); margin-right: 0.3em; }
+    .tag-item { cursor: pointer; text-decoration: underline; margin-right: 0.3em; }
     #slideshow {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(29,0,39,0.97);
-      backdrop-filter: blur(8px);
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      animation: fadeIn 0.5s;
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: var(--modal-bg); backdrop-filter: blur(8px);
+      display: none; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 1000; animation: fadeIn 0.5s;
     }
-    @keyframes fadeIn {
-      from { opacity: 0;}
-      to { opacity: 1;}
-    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     #slideshow.show { display: flex; }
     #slideImg {
-      max-width: 90vw;
-      max-height: 85vh;
-      border-radius: 18px;
-      box-shadow: 0 0 36px #e7548077;
-      border: 3px solid #ff2a68;
-      transition: opacity 0.3s;
+      max-width: 90vw; max-height: 80vh; border-radius: 18px;
+      box-shadow: 0 0 36px var(--primary-shadow); border: 3px solid var(--primary);
+      transition: opacity 0.3s; object-fit: contain;
     }
     #slideTags {
-      color: #ffb3d2;
-      margin-top: 1rem;
-      max-width: 80vw;
-      text-align: center;
-      font-size: 1.1em;
-      word-wrap: break-word;
-      text-shadow: 0 0 8px #e75480bb;
-      font-family: 'Pacifico', cursive;
-      letter-spacing: 0.05em;
+      color: var(--text-muted); margin-top: 1rem; max-width: 80vw;
+      text-align: center; font-size: 1.1em; word-wrap: break-word;
+      text-shadow: 0 0 8px var(--primary-shadow);
+      font-family: 'Pacifico', cursive; letter-spacing: 0.05em;
+      max-height: 5vh; overflow-y: auto;
     }
-    .slideshow-controls {
-      margin-top: 0.8rem;
-      display: flex;
-      gap: 1rem;
-    }
+    .slideshow-controls { margin-top: 0.8rem; display: flex; gap: 1rem; }
     .slideshow-controls button {
-      background: #e75480;
-      color: #fff;
-      border: none;
-      padding: 0.7rem 1.5rem;
-      border-radius: 999px;
-      font-size: 1.5rem;
-      cursor: pointer;
+      background: var(--primary); color: #fff; border: none; padding: 0.7rem 1.5rem;
+      border-radius: 999px; font-size: 1.5rem; cursor: pointer;
       transition: background-color 0.3s, transform 0.1s, box-shadow 0.2s;
-      box-shadow: 0 0 12px #e75480bb;
+      box-shadow: 0 0 12px var(--primary-shadow);
     }
-    .slideshow-controls button:hover {
-      background: #ff7eb9;
-      transform: scale(1.1);
-      box-shadow: 0 0 28px #e75480cc;
+    .slideshow-controls button:hover { background: var(--primary-hover); transform: scale(1.1); box-shadow: 0 0 28px var(--primary-shadow); }
+    .slideshow-controls a { font-size: 1.5rem; padding: 0.7rem; line-height: 1; text-decoration: none; }
+    
+    .info { text-align: center; color: var(--primary-hover); margin: 1.2rem; font-size: 16px; font-family: 'Playfair Display', serif; text-shadow: 0 0 6px var(--primary-shadow); }
+    
+    .modal {
+      display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.7); align-items: center; justify-content: center;
     }
-    .info {
-      text-align: center;
-      color: #ff7eb9;
-      margin: 1.2rem;
-      font-size: 16px;
-      font-family: 'Playfair Display', serif;
-      text-shadow: 0 0 6px #e75480cc;
-    }
-    .modal { 
-      display: none; 
-      position: fixed; 
-      z-index: 2000; 
-      left: 0; top: 0; 
-      width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.7); 
-      align-items: center; 
-      justify-content: center;
-    }
-    .modal.show { display: flex; }
+    .modal.show { display: flex; animation: fadeIn 0.3s; }
     .modal-content {
-      background: rgba(30,0,50,0.97);
-      color: #fff;
-      padding: 2rem;
-      border-radius: 20px;
-      border: 2.5px solid #ff2a68;
-      box-shadow: 0 0 32px #e75480bb;
-      max-width: 90vw;
-      max-height: 90vh;
-      overflow: auto;
+      background: var(--modal-bg); color: var(--text); padding: 2rem; border-radius: 20px;
+      border: 2.5px solid var(--primary); box-shadow: 0 0 32px var(--primary-shadow);
+      max-width: 90vw; max-height: 90vh; overflow-y: auto;
     }
-    h2 {
-      font-family: 'Playfair Display', serif;
-      letter-spacing: 0.08em;
-      color: #ff7eb9;
-      text-shadow: 0 0 6px #e75480cc;
-      margin-top: 0;
-    }
+    .modal-content h2 { font-family: 'Playfair Display', serif; letter-spacing: 0.08em; color: var(--primary-hover); text-shadow: 0 0 6px var(--primary-shadow); margin-top: 0; }
+    
     .suggestions {
-      position: absolute; 
-      background: #333; 
-      color: #fff; 
-      border-radius: 0 0 5px 5px; 
-      z-index: 500; 
-      max-height: 160px; 
-      overflow: auto; 
-      width: 100%; 
-      left: 0; 
-      top: 100%;
-      font-family: 'Segoe UI', sans-serif;
-      font-size: 1em;
-      box-shadow: 0 3px 12px #e75480aa;
+      position: absolute; background: #333; color: #fff; border-radius: 0 0 5px 5px;
+      z-index: 500; max-height: 160px; overflow-y: auto; width: 250px;
+      left: 0; top: 100%; font-family: 'Segoe UI', sans-serif; font-size: 1em;
+      box-shadow: 0 3px 12px #00000099;
     }
     .suggestion-item { padding: 0.5em; cursor: pointer; }
-    .suggestion-item:hover, .suggestion-item.active { background: #ff7eb9; color: #222; }
+    .suggestion-item:hover, .suggestion-item.active { background: var(--primary-hover); color: #222; }
+    
+    footer { text-align: center; color: var(--primary-hover); font-family: 'Pacifico', cursive; font-size: 1.2em; margin: 2em 0 1em 0; text-shadow: 0 0 8px var(--primary); user-select: none; letter-spacing: 0.03em; }
+    
+    /* Utility & Advanced UI */
+    #loader {
+      display: flex; justify-content: center; padding: 2rem; width: 100%; grid-column: 1 / -1;
+    }
+    .spinner {
+      border: 4px solid var(--primary-shadow); border-top-color: var(--primary-hover);
+      border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #backToTop {
+      position: fixed; bottom: 20px; right: 20px; z-index: 500;
+      background: var(--primary); color: white; border: none; border-radius: 50%;
+      width: 50px; height: 50px; font-size: 24px; cursor: pointer;
+      display: none; align-items: center; justify-content: center;
+      box-shadow: 0 2px 10px #00000066;
+      transition: opacity 0.3s, transform 0.3s, background-color 0.3s;
+    }
+    #backToTop.show { display: flex; }
+    #backToTop:hover { background-color: var(--primary-hover); transform: scale(1.1); }
+    
+    #notification-container {
+        position: fixed; top: 80px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;
+    }
+    .notification {
+        background: var(--primary); color: white; padding: 15px; border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-size: 1em;
+        opacity: 0; transform: translateX(100%); animation: slideIn 0.5s forwards;
+    }
+    .notification.error { background: #c82333; }
+    .notification.success { background: #218838; }
+    @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+    @keyframes slideOut { to { opacity: 0; transform: translateX(100%); } }
+    
     @media (max-width:600px) {
       header { flex-direction: column; }
       .thumb img { height: 160px; }
       .modal-content { padding: 1em; }
     }
-    /* Footer */
-    footer {
-      text-align: center;
-      color: #ff7eb9;
-      font-family: 'Pacifico', cursive;
-      font-size: 1.2em;
-      margin: 2em 0 1em 0;
-      text-shadow: 0 0 8px #e75480;
-      user-select: none;
-      letter-spacing: 0.03em;
-    }
-    /* Plugin panel styles */
-    #pluginPanel textarea { font-family: monospace; background: #1a001d; color: #ff7eb9; border: 1px solid #e75480; border-radius: 5px; }
-    #pluginPanel button { background: #e75480; color: #fff; border: none; border-radius: 5px; padding: 0.3em 1em; cursor: pointer;}
-    #pluginPanel button:hover { background: #ff7eb9; color: #222; }
   </style>
 </head>
 <body>
   <header>
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; flex:1; position:relative;">
-      <input id="searchInput" placeholder="Search for your next waifu…" aria-label="Search tags" autocomplete="off" aria-autocomplete="list"/>
-      <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggested tags"></div>
+      <input id="searchInput" placeholder="Search (e.g., '1girl -long_hair')..." aria-label="Search tags" autocomplete="off" aria-autocomplete="list"/>
+      <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggested tags" style="display:none;"></div>
       <button id="searchBtn" aria-label="Search images by tags">🔎 Search</button>
       <select id="sortSelect" aria-label="Sort images">
         <option value="date">Sort by Date</option>
@@ -300,10 +253,15 @@
     </div>
     <div class="stats" id="viewStats" aria-live="polite">Waifus seen: 0</div>
   </header>
+
   <main>
     <div class="gallery" id="gallery" role="list" aria-label="Image gallery"></div>
+    <div id="loader" style="display:none;"><div class="spinner"></div></div>
+    <div id="sentinel" aria-hidden="true" style="height: 1px;"></div>
   </main>
-  <div class="info">Uses cookies for favorites and stats. Infinite scroll enabled.</div>
+
+  <div class="info">Uses local storage for favorites and settings. Infinite scroll enabled.</div>
+
   <div id="slideshow" role="dialog" aria-modal="true" aria-label="Image slideshow" tabindex="-1">
     <img id="slideImg" alt="Slideshow image"/>
     <div id="slideTags"></div>
@@ -311,79 +269,467 @@
       <button id="prevSlide" aria-label="Previous image">⏪</button>
       <button id="nextSlide" aria-label="Next image">⏩</button>
       <button id="favoriteSlide" aria-label="Favorite this image">💖</button>
+      <a id="downloadLink" href="#" download="image.jpg" class="slideshow-controls-button" aria-label="Download full image" title="Download">💾</a>
       <button id="closeSlideshow" aria-label="Close slideshow">❌</button>
     </div>
   </div>
+
   <div id="favoritesModal" class="modal" role="dialog" aria-modal="true" aria-label="Favorites">
     <div class="modal-content">
-      <h2>Favorites</h2>
-      <div id="favoritesGallery" class="gallery"></div>
-      <button id="closeFavs" aria-label="Close favorites modal">Close</button>
+      <h2 id="modalTitle">Favorites</h2>
+      <div id="modalBody" class="gallery"></div>
+      <button id="closeModal" aria-label="Close modal">Close</button>
     </div>
   </div>
-  <!-- Optional Easter Egg: Press ↑ ↑ ↓ ↓ ← → ← → B A for a surprise! -->
+  
+  <div id="notification-container"></div>
+  <button id="backToTop" title="Back to top">⬆️</button>
+  
   <footer>
-    Made with ❤️ for waifu lovers &mdash; <span style="color:#fff3;">SLIGHTLY CHILLED WATER</span>
+    Made with ❤️ for waifu lovers &mdash; <span style="color:var(--text);opacity:0.3;">ADVANCED EDITION</span>
   </footer>
-  <!-- Plugin Panel -->
-  <div id="pluginPanel" style="position:fixed;bottom:1em;right:1em;z-index:4000;background:#222;color:#ff7eb9;padding:1em;border-radius:12px;box-shadow:0 2px 18px #ff2a6890;">
-    <strong>Plugins</strong><br>
-    <textarea id="pluginScript" rows="4" style="width:200px;"></textarea><br>
-    <button id="runPlugin" style="margin-top:0.5em;">Run</button>
-  </div>
-  <!-- ADMIN PANEL will be injected by JS if you are admin -->
-  <script defer>
-    // ... [ALL JS FROM YOUR PREVIOUS INDEX.HTML, unchanged, up to before the admin panel] ...
-    // Paste your original JS up to before the admin panel injection here (see previous completions)
-    // ---- ADMIN PANEL (for IP 190.80.34.73 only) ----
-    function createAdminPanel() {
-      if (document.getElementById('adminPanel')) return;
-      const adminDiv = document.createElement('div');
-      adminDiv.id = 'adminPanel';
-      adminDiv.style = 'position:fixed;top:1em;right:1em;z-index:20000;background:#1a001d;color:#ff7eb9;padding:1.5em 2.5em;border-radius:18px;box-shadow:0 4px 24px #ff2a6890;';
-      adminDiv.innerHTML = `
-        <h3 style="margin-top:0">Admin Panel</h3>
-        <button id="admin-stats-btn">Show User Stats</button>
-        <button id="admin-clear-cache-btn">Clear API Cache</button>
-        <button id="admin-refresh-images-btn">Refresh Images</button>
-        <button id="admin-delete-image-btn">Delete Current Image</button>
-        <div id="admin-output" style="margin-top:1.2em;font-size:.98em;color:#fff"></div>
-      `;
-      document.body.appendChild(adminDiv);
 
-      document.getElementById('admin-stats-btn').onclick = async function() {
-        // Example: Fetch stats (implement the endpoint /api/admin/stats in backend!)
-        const r = await fetch('/api/admin/stats');
-        document.getElementById('admin-output').textContent = r.ok ? await r.text() : 'Failed to fetch stats';
-      };
-      document.getElementById('admin-clear-cache-btn').onclick = async function() {
-        const resp = await fetch('/api/admin/clear-cache', { method: 'POST' });
-        document.getElementById('admin-output').textContent = resp.ok ? 'Cache cleared!' : 'Failed to clear cache.';
-      };
-      document.getElementById('admin-refresh-images-btn').onclick = function() {
-        page = 0; fetchImages(currentTags, false);
-        document.getElementById('admin-output').textContent = 'Image gallery refreshed!';
-      };
-      document.getElementById('admin-delete-image-btn').onclick = async function() {
-        // Example: Send delete command for currently viewed image (implement /api/admin/delete-image in backend!)
-        const img = images[currentSlide];
-        if (!img) return document.getElementById('admin-output').textContent = 'No image selected';
-        const resp = await fetch('/api/admin/delete-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: img.id })
-        });
-        document.getElementById('admin-output').textContent = resp.ok ? 'Image deleted!' : 'Failed to delete image.';
-        if (resp.ok) { images.splice(currentSlide, 1); fetchImages(currentTags, false); }
-      };
-    }
-    fetch('https://api.ipify.org?format=json')
-      .then(r => r.json())
-      .then(data => {
-        if (data.ip === '190.80.34.73') {
-          createAdminPanel();
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+      const app = {
+        state: {
+          page: 0,
+          seen: 0,
+          currentTags: '',
+          images: [],
+          currentSlideIndex: 0,
+          isLoading: false,
+          currentSort: 'date',
+          favorites: [],
+          konamiActivated: false,
+          activeSuggestion: -1,
+        },
+        elements: {
+          gallery: document.getElementById('gallery'),
+          slideImg: document.getElementById('slideImg'),
+          slideTags: document.getElementById('slideTags'),
+          stats: document.getElementById('viewStats'),
+          slideshow: document.getElementById('slideshow'),
+          sortSelect: document.getElementById('sortSelect'),
+          searchInput: document.getElementById('searchInput'),
+          suggestionsBox: document.getElementById('suggestions'),
+          modal: document.getElementById('favoritesModal'),
+          modalTitle: document.getElementById('modalTitle'),
+          modalBody: document.getElementById('modalBody'),
+          loader: document.getElementById('loader'),
+          sentinel: document.getElementById('sentinel'),
+          backToTop: document.getElementById('backToTop'),
+          notificationContainer: document.getElementById('notification-container'),
+          downloadLink: document.getElementById('downloadLink'),
+        },
+        init() {
+          this.loadSettings();
+          this.attachEventListeners();
+          this.elements.stats.textContent = `Waifus seen: ${this.state.seen}`;
+          this.search();
+          this.initIntersectionObserver();
+        },
+        
+        // --- Storage & Settings ---
+        storage: {
+          get: (key, fallback = null) => {
+            try {
+              const item = localStorage.getItem(key);
+              return item ? JSON.parse(item) : fallback;
+            } catch (e) { console.error('Failed to parse from localStorage', e); return fallback; }
+          },
+          set: (key, value) => {
+            try { localStorage.setItem(key, JSON.stringify(value)); } 
+            catch (e) { console.error('Failed to set localStorage item', e); }
+          }
+        },
+        loadSettings() {
+          const theme = this.storage.get('theme', 'dark');
+          if (theme === 'light') document.body.classList.add('light');
+
+          this.state.seen = this.storage.get('waifus_seen', 0);
+          this.state.favorites = this.storage.get('favorites', []);
+          this.state.currentSort = this.storage.get('sort_order', 'date');
+          this.elements.sortSelect.value = this.state.currentSort;
+          this.state.currentTags = this.storage.get('last_search', '');
+          this.elements.searchInput.value = this.state.currentTags;
+        },
+
+        // --- API & Data Fetching ---
+        api: {
+          _mockTagsDb: ['1girl', 'solo', 'long_hair', 'breasts', 'blush', 'smile', 'looking_at_viewer', 'short_hair', 'blue_eyes', 'skirt', 'blonde_hair', 'open_mouth', 'thighhighs', 'ribbons', 'multiple_girls', 'dress', 'brown_hair', 'red_eyes', 'school_uniform', 'twintails', 'hair_ornament', 'hat', 'animal_ears', 'long_sleeves', 'shirt', 'bare_shoulders', 'catgirl', 'black_hair', 'bow', 'cleavage', 'gloves', 'very_long_hair', 'green_eyes', 'stockings', 'ponytail', 'white_hair', 'purple_eyes', 'pantyhose', 'navel', 'bikini', 'swimsuit', 'maid', 'hairband', 'fox_girl', 'jewelry', 'braids', 'ahoge', 'tail', 'barefoot', 'bangs', 'weapon', 'short_shorts', 'sidelocks', 'sword', 'zettai_ryouiki', 'food', 'animal_ear_fluff', 'gun', 'glasses', 'uniform', 'earrings', 'pink_hair', 'wings', 'horns', 'elf', 'yukata', 'geta'],
+          fetchImages: async ({ tags, page, limit, sort }) => {
+            await new Promise(res => setTimeout(res, 500)); // Simulate network latency
+            const res = await fetch(`/api/images?tags=${encodeURIComponent(tags)}&page=${page}&limit=${limit}&sort=${sort}&_=${Date.now()}`);
+            if (!res.ok) throw new Error(`Fetch failed: ${res.statusText}`);
+            const data = await res.json();
+            return Array.isArray(data.post) ? data.post : [];
+          },
+          fetchTagSuggestions: async (query) => {
+            if (!query) return [];
+            await new Promise(res => setTimeout(res, 100)); // Simulate network latency
+            const qLower = query.toLowerCase();
+            return this._mockTagsDb.filter(tag => tag.includes(qLower)).slice(0, 10);
+          }
+        },
+        async fetchAndRenderImages(append = false) {
+          if (this.state.isLoading) return;
+          this.state.isLoading = true;
+          this.elements.loader.style.display = 'flex';
+          try {
+            const posts = await this.api.fetchImages({
+              tags: this.state.currentTags,
+              page: this.state.page,
+              limit: 20,
+              sort: this.state.currentSort
+            });
+            if (!append) {
+              this.state.images = [];
+              this.elements.gallery.innerHTML = '';
+            }
+            this.state.images.push(...posts);
+            this.renderImages(posts);
+            this.state.seen += posts.length;
+            this.elements.stats.textContent = `Waifus seen: ${this.state.seen}`;
+            this.storage.set('waifus_seen', this.state.seen);
+          } catch (e) {
+            console.error(e);
+            this.showNotification('Error loading images. The API might be down.', 'error');
+          } finally {
+            this.state.isLoading = false;
+            this.elements.loader.style.display = 'none';
+          }
+        },
+
+        // --- Rendering ---
+        renderImages(posts) {
+          const frag = document.createDocumentFragment();
+          posts.forEach((post, index) => {
+            const globalIndex = this.state.images.length - posts.length + index;
+            frag.appendChild(this.createThumbnail(post, globalIndex));
+          });
+          this.elements.gallery.appendChild(frag);
+        },
+        createThumbnail(post, index) {
+          const div = document.createElement('div');
+          div.className = 'thumb';
+          div.tabIndex = 0;
+          div.role = 'listitem';
+          div.setAttribute('aria-label', `Tags: ${post.tags}`);
+          div.dataset.index = index;
+
+          const img = document.createElement('img');
+          img.src = post.preview_url || post.sample_url || '';
+          img.alt = post.tags || 'Image';
+          img.loading = "lazy";
+          
+          const tagDiv = document.createElement('div');
+          tagDiv.className = 'tags';
+          this.renderClickableTags(post.tags, tagDiv, 4);
+
+          div.append(img, tagDiv);
+          return div;
+        },
+        renderClickableTags(tagString, container, limit = Infinity) {
+          container.innerHTML = '';
+          tagString.split(' ').slice(0, limit).forEach(tag => {
+            const tagSpan = document.createElement('span');
+            tagSpan.textContent = tag.replace(/_/g, ' ');
+            tagSpan.className = 'tag-item';
+            tagSpan.addEventListener('click', e => {
+              e.stopPropagation();
+              this.elements.searchInput.value = tag;
+              if(this.elements.slideshow.classList.contains('show')) this.hideSlideshow();
+              this.search();
+            });
+            container.appendChild(tagSpan);
+          });
+        },
+        
+        // --- UI & Event Handlers ---
+        attachEventListeners() {
+          document.getElementById('searchBtn').addEventListener('click', () => this.search());
+          this.elements.searchInput.addEventListener('keydown', e => e.key === 'Enter' && !this.elements.suggestionsBox.style.display !== 'none' && this.search());
+          this.elements.sortSelect.addEventListener('change', () => this.handleSortChange());
+          
+          // Theme
+          document.getElementById('toggleTheme').addEventListener('click', () => this.toggleTheme());
+
+          // Favorites
+          document.getElementById('favoritesBtn').addEventListener('click', () => this.showFavorites());
+          document.getElementById('clearFavs').addEventListener('click', () => this.clearFavorites());
+          
+          // Modals & Slideshow
+          document.getElementById('closeModal').addEventListener('click', () => this.hideModal());
+          this.elements.modal.addEventListener('click', e => e.target === this.elements.modal && this.hideModal());
+          document.getElementById('closeSlideshow').addEventListener('click', () => this.hideSlideshow());
+          
+          // Slideshow Controls
+          document.getElementById('prevSlide').addEventListener('click', () => this.changeSlide(-1));
+          document.getElementById('nextSlide').addEventListener('click', () => this.changeSlide(1));
+          document.getElementById('favoriteSlide').addEventListener('click', () => this.toggleFavorite());
+
+          // Gallery interaction
+          this.elements.gallery.addEventListener('click', e => this.handleGalleryClick(e));
+          this.elements.gallery.addEventListener('keydown', e => {
+            if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('thumb')) {
+              e.preventDefault();
+              this.handleGalleryClick(e);
+            }
+          });
+
+          // Global Keydowns
+          window.addEventListener('keydown', e => this.handleGlobalKeys(e));
+          
+          // Suggestions
+          this.elements.searchInput.addEventListener('input', e => this.handleSuggestionInput(e));
+          this.elements.searchInput.addEventListener('keydown', e => this.handleSuggestionKeys(e));
+          document.addEventListener('click', () => this.hideSuggestions());
+
+          // Back to top
+          window.addEventListener('scroll', () => this.toggleBackToTop());
+          this.elements.backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+          // Konami Code
+          const konami = [38,38,40,40,37,39,37,39,66,65];
+          let konamiIndex = 0;
+          window.addEventListener('keydown', e => {
+            if (e.keyCode === konami[konamiIndex++]) {
+              if (konamiIndex === konami.length) {
+                this.toggleKonamiMode();
+                konamiIndex = 0;
+              }
+            } else {
+              konamiIndex = 0;
+            }
+          });
+        },
+        
+        // --- Actions ---
+        search() {
+          const query = this.elements.searchInput.value.trim();
+          this.state.currentTags = query;
+          this.storage.set('last_search', query);
+          this.state.page = 0;
+          this.hideSuggestions();
+          this.fetchAndRenderImages(false);
+        },
+        loadMoreImages() {
+          this.state.page++;
+          this.fetchAndRenderImages(true);
+        },
+        handleSortChange() {
+          this.state.currentSort = this.elements.sortSelect.value;
+          this.storage.set('sort_order', this.state.currentSort);
+          this.search();
+        },
+        toggleTheme() {
+          document.body.classList.toggle('light');
+          const theme = document.body.classList.contains('light') ? 'light' : 'dark';
+          this.storage.set('theme', theme);
+        },
+
+        // --- Slideshow Logic ---
+        showSlideshow(index) {
+          this.state.currentSlideIndex = index;
+          this.updateSlideContent();
+          this.elements.slideshow.classList.add('show');
+          this.elements.slideshow.focus();
+        },
+        hideSlideshow() {
+          this.elements.slideshow.classList.remove('show');
+          this.elements.slideImg.src = ''; // Clear image to save memory
+        },
+        updateSlideContent() {
+          const post = this.state.images[this.state.currentSlideIndex];
+          if (!post) return;
+          this.elements.slideImg.src = post.file_url || post.sample_url || '';
+          this.elements.slideImg.alt = 'Tags: ' + post.tags;
+          this.renderClickableTags(post.tags, this.elements.slideTags);
+          this.elements.downloadLink.href = post.file_url;
+          this.elements.downloadLink.download = `gelbooru_${post.id}_${post.tags.split(' ')[0]}.jpg`;
+          
+          // Preload next and previous images
+          this.preloadImage(this.state.currentSlideIndex + 1);
+          this.preloadImage(this.state.currentSlideIndex - 1);
+        },
+        changeSlide(direction) {
+          const len = this.state.images.length;
+          if (len === 0) return;
+          this.state.currentSlideIndex = (this.state.currentSlideIndex + direction + len) % len;
+          this.updateSlideContent();
+        },
+        preloadImage(index) {
+            const len = this.state.images.length;
+            if (len === 0) return;
+            const validIndex = (index + len) % len;
+            const post = this.state.images[validIndex];
+            if (post) {
+                const img = new Image();
+                img.src = post.file_url || post.sample_url;
+            }
+        },
+        handleGalleryClick(e) {
+          const thumb = e.target.closest('.thumb');
+          if (thumb && thumb.dataset.index) {
+            this.showSlideshow(parseInt(thumb.dataset.index, 10));
+          }
+        },
+
+        // --- Favorites Logic ---
+        showFavorites() {
+          this.elements.modalTitle.textContent = "Favorites";
+          this.elements.modalBody.innerHTML = '';
+          if (this.state.favorites.length === 0) {
+            this.elements.modalBody.innerHTML = '<p style="padding:1em">Your harem is empty 🥺 Add some waifus!</p>';
+          } else {
+            const favsBackup = [...this.state.images]; // backup current search
+            this.state.images = this.state.favorites; // temporarily set images to favorites for slideshow
+            this.state.favorites.forEach((post, index) => {
+              const thumb = this.createThumbnail(post, index);
+              thumb.addEventListener('click', () => {
+                this.hideModal();
+                this.showSlideshow(index);
+              });
+              this.elements.modalBody.appendChild(thumb);
+            });
+            // Restore images after modal is closed
+            this.elements.modal.addEventListener('transitionend', () => {
+                this.state.images = favsBackup;
+            }, { once: true });
+          }
+          this.elements.modal.classList.add('show');
+        },
+        toggleFavorite() {
+          const post = this.state.images[this.state.currentSlideIndex];
+          if (!post) return;
+          const favIndex = this.state.favorites.findIndex(fav => fav.id === post.id);
+          if (favIndex >= 0) {
+            this.state.favorites.splice(favIndex, 1);
+            this.showNotification('Removed from favorites 🥺');
+          } else {
+            this.state.favorites.push(post);
+            this.showNotification('Added to your harem 💖', 'success');
+          }
+          this.storage.set('favorites', this.state.favorites);
+        },
+        clearFavorites() {
+          if (confirm('Are you sure you want to clear all favorites?')) {
+            this.state.favorites = [];
+            this.storage.set('favorites', []);
+            this.showNotification('All favorites cleared 🗑️');
+          }
+        },
+
+        // --- Suggestions Logic ---
+        async handleSuggestionInput(e) {
+            const query = e.target.value.trim().split(' ').pop();
+            if (!query) {
+                this.hideSuggestions();
+                return;
+            }
+            const suggestions = await this.api.fetchTagSuggestions(query);
+            if (suggestions.length > 0) {
+                this.elements.suggestionsBox.innerHTML = '';
+                suggestions.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    div.textContent = s;
+                    div.setAttribute('role', 'option');
+                    div.addEventListener('mousedown', () => {
+                        let terms = this.elements.searchInput.value.split(' ');
+                        terms[terms.length - 1] = s;
+                        this.elements.searchInput.value = terms.join(' ') + ' ';
+                        this.hideSuggestions();
+                        this.elements.searchInput.focus();
+                    });
+                    this.elements.suggestionsBox.appendChild(div);
+                });
+                this.elements.suggestionsBox.style.display = 'block';
+                this.state.activeSuggestion = -1;
+            } else {
+                this.hideSuggestions();
+            }
+        },
+        handleSuggestionKeys(e) {
+          const items = this.elements.suggestionsBox.querySelectorAll('.suggestion-item');
+          if (!items.length || this.elements.suggestionsBox.style.display === 'none') return;
+          
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            this.state.activeSuggestion = (this.state.activeSuggestion + 1) % items.length;
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this.state.activeSuggestion = (this.state.activeSuggestion - 1 + items.length) % items.length;
+          } else if (e.key === 'Enter') {
+            if (this.state.activeSuggestion > -1) {
+              e.preventDefault();
+              items[this.state.activeSuggestion].dispatchEvent(new Event('mousedown', {bubbles: true}));
+            } else {
+              this.hideSuggestions();
+              this.search();
+            }
+          } else if (e.key === 'Escape') {
+            this.hideSuggestions();
+          }
+          items.forEach((item, idx) => item.classList.toggle('active', idx === this.state.activeSuggestion));
+        },
+        hideSuggestions() {
+          this.elements.suggestionsBox.style.display = 'none';
+          this.state.activeSuggestion = -1;
+        },
+
+        // --- Utilities ---
+        handleGlobalKeys(e) {
+          if (this.elements.modal.classList.contains('show') && e.key === 'Escape') this.hideModal();
+          if (this.elements.slideshow.classList.contains('show')) {
+            switch (e.key) {
+              case 'Escape': this.hideSlideshow(); break;
+              case 'ArrowRight': this.changeSlide(1); break;
+              case 'ArrowLeft': this.changeSlide(-1); break;
+              case 'f': this.toggleFavorite(); break;
+            }
+          }
+        },
+        initIntersectionObserver() {
+          const observer = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && !this.state.isLoading) {
+              this.loadMoreImages();
+            }
+          }, { rootMargin: "200px" });
+          observer.observe(this.elements.sentinel);
+        },
+        toggleBackToTop() {
+          if (window.scrollY > 300) {
+            this.elements.backToTop.classList.add('show');
+          } else {
+            this.elements.backToTop.classList.remove('show');
+          }
+        },
+        showNotification(message, type = 'info') {
+            const notif = document.createElement('div');
+            notif.className = `notification ${type}`;
+            notif.textContent = message;
+            this.elements.notificationContainer.appendChild(notif);
+            setTimeout(() => {
+                notif.style.animation = 'slideOut 0.5s forwards';
+                notif.addEventListener('animationend', () => notif.remove());
+            }, 3000);
+        },
+        hideModal() {
+            this.elements.modal.classList.remove('show');
+        },
+        toggleKonamiMode() {
+          this.state.konamiActivated = !this.state.konamiActivated;
+          document.body.style.setProperty('--scanline-opacity', this.state.konamiActivated ? '0.15' : '0');
+          this.showNotification(`✨ Ultra Waifu Mode ${this.state.konamiActivated ? 'ACTIVATED' : 'DEACTIVATED'} ✨`, 'success');
         }
-      });
+      };
+
+      app.init();
+      window.app = app; // For debugging purposes
+    });
   </script>
 </body>
 </html>
