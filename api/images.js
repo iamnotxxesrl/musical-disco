@@ -1,5 +1,3 @@
-// api/images.js
-
 import Redis from 'ioredis';
 import fetch from 'node-fetch';
 import { Agent } from 'https';
