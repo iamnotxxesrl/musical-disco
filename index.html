@@ -407,7 +407,7 @@
       75% { transform: scale(1.08) rotate(2deg); }
       100% { transform: scale(1.07) rotate(-2deg); }
     }
-    .thumb img {
+    .thumb img, .thumb video { /* Apply styles to both img and video in thumbnail */
       width: 100%;
       height: 100%; /* Fill available height */
       object-fit: cover;
@@ -420,14 +420,14 @@
       z-index: 0;
       backface-visibility: hidden; /* Prevent flickering on some browsers */
     }
-    .thumb:hover img {
+    .thumb:hover img, .thumb:hover video {
       filter: brightness(1.0) blur(0.5px) contrast(1.1); /* Slightly brighter and less blur */
       transform: scale(1.02) translateZ(10px); /* Slight scale and Z-axis for parallax effect */
     }
 
     /* Thumbnail Skeleton Loader */
     .thumb.loading .tags { display: none; }
-    .thumb.loading img { display: none; }
+    .thumb.loading img, .thumb.loading video { display: none; }
     .thumb.loading {
         background: linear-gradient(90deg, var(--thumb-bg) 0%, rgba(255,255,255,0.05) 50%, var(--thumb-bg) 100%);
         background-size: 200% 100%;
@@ -506,7 +506,8 @@
       to { opacity: 1; transform: scale(1); }
     }
     #slideshow.show { display: flex; }
-    #slideImg {
+
+    #slideImg, #slideVideo { /* Apply styles to both img and video in slideshow */
       max-width: 90vw;
       max-height: 85vh;
       border-radius: 25px; /* Larger border-radius */
@@ -514,8 +515,9 @@
       border: 3px solid var(--aurora-color-4);
       transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
       object-fit: contain;
+      outline: none; /* Remove outline for focus */
     }
-    #slideshow.show #slideImg { /* Animation for image appearing in slideshow */
+    #slideshow.show #slideImg, #slideshow.show #slideVideo { /* Animation for image/video appearing in slideshow */
         animation: slideIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
     }
     @keyframes slideIn {
@@ -778,7 +780,7 @@
         header input { width: calc(100% - 1em); margin: 0.5em 0.5em; }
         header button, header select { width: auto; flex-grow: 1; margin: 0.3em; }
         .gallery { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
-        .thumb img { height: 100%; } /* Changed from fixed height */
+        .thumb img, .thumb video { height: 100%; } /* Changed from fixed height */
         .modal-content { padding: 2em; border-radius: 20px; }
         .slideshow-controls { flex-wrap: wrap; justify-content: center; gap: 1rem; }
         .slideshow-controls button { padding: 0.7rem 1.2rem; font-size: 1.3rem; }
@@ -791,10 +793,10 @@
         header input, header button, header select { padding: 0.6em 1em; font-size: 0.9em; }
         .gallery { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; padding: 1rem; }
         .thumb { aspect-ratio: 1 / 1.4; border-radius: 18px; } /* Adjust aspect ratio for very small screens */
-        .thumb img { height: 100%; border-radius: 16px; }
+        .thumb img, .thumb video { height: 100%; border-radius: 16px; }
         .tags { padding: 8px; font-size: 0.9em; border-radius: 0 0 16px 16px; }
         .tags span { font-size: 0.8em; padding: 0.1em 0.4em; }
-        #slideImg { max-width: 95vw; max-height: 80vh; border-radius: 15px; }
+        #slideImg, #slideVideo { max-width: 95vw; max-height: 80vh; border-radius: 15px; }
         #slideTags { font-size: 1em; padding: 0.5em 1em; border-radius: 10px; }
         .slideshow-controls button { padding: 0.6rem 1rem; font-size: 1.1rem; }
         .modal-content { padding: 1.5em; border-radius: 15px; }
@@ -830,8 +832,10 @@
     <div class="gallery" id="gallery" role="list" aria-label="Image gallery"></div>
   </main>
   <div class="info">Uses cookies for favorites and stats. Infinite scroll enabled.</div>
+  
   <div id="slideshow" role="dialog" aria-modal="true" aria-label="Image slideshow" tabindex="-1">
     <img id="slideImg" alt="Slideshow image"/>
+    <video id="slideVideo" controls loop autoplay muted style="display:none;"></video>
     <div id="slideTags"></div>
     <div class="slideshow-controls">
       <button id="prevSlide" aria-label="Previous image">⏪</button>
@@ -840,6 +844,7 @@
       <button id="closeSlideshow" aria-label="Close slideshow">❌</button>
     </div>
   </div>
+
   <div id="favoritesModal" class="modal" role="dialog" aria-modal="true" aria-label="Favorites">
     <div class="modal-content">
       <h2>Favorites</h2>
@@ -902,6 +907,7 @@
     const batchSize = 20;
     const gallery = document.getElementById('gallery'),
           slideImg = document.getElementById('slideImg'),
+          slideVideo = document.getElementById('slideVideo'), // Get video element
           slideTags = document.getElementById('slideTags'),
           stats = document.getElementById('viewStats'),
           slideshow = document.getElementById('slideshow'),
@@ -1115,19 +1121,39 @@
         div.className = 'thumb'; div.tabIndex=0;
         div.role = 'listitem'; div.setAttribute('aria-label', `Image with tags: ${post.tags}`);
 
-        // Create image element
-        const img = document.createElement('img');
-        img.src = post.preview_url || post.sample_url || '';
-        img.alt = post.tags || 'Image';
-        img.loading = "lazy"; // Standard lazy loading
-        img.onload = () => div.classList.remove('loading'); // Remove loading class when image loads
+        const fileUrl = post.file_url || post.sample_url || '';
+        const isVideo = /\.(mp4|webm|gif)$/i.test(fileUrl);
+
+        let mediaElement;
+        if (isVideo) {
+            mediaElement = document.createElement('video');
+            mediaElement.src = post.preview_url || ''; // Use preview for thumbnail video
+            mediaElement.loop = true;
+            mediaElement.muted = true;
+            mediaElement.autoplay = false; // Don't autoplay thumbnails
+            mediaElement.setAttribute('preload', 'metadata'); // Load just enough to get dimensions
+            mediaElement.setAttribute('playsinline', ''); // For iOS autoplay
+            mediaElement.onmouseenter = () => mediaElement.play(); // Play on hover
+            mediaElement.onmouseleave = () => mediaElement.pause(); // Pause on hover out
+        } else {
+            mediaElement = document.createElement('img');
+            mediaElement.src = post.preview_url || post.sample_url || '';
+        }
+        mediaElement.alt = post.tags || 'Image';
+        mediaElement.loading = "lazy"; // Standard lazy loading
+        mediaElement.onload = () => div.classList.remove('loading'); // Remove loading class when image loads
+        // For videos, the 'loadeddata' event is more appropriate than 'onload'
+        if (isVideo) {
+            mediaElement.addEventListener('loadeddata', () => div.classList.remove('loading'), {once: true});
+        }
+
 
         // Create tags element
         const tagDiv = document.createElement('div');
         tagDiv.className = 'tags';
         renderTags(post.tags, tagDiv); // clickable tags
 
-        div.append(img, tagDiv);
+        div.append(mediaElement, tagDiv); // Append media element instead of just img
         frag.appendChild(div);
       });
 
@@ -1147,14 +1173,25 @@
     gallery.addEventListener('click', e => {
       const thumb = e.target.closest('.thumb');
       if (thumb && !thumb.classList.contains('loading')) { // Prevent click on loading skeletons
-        showSlide(images.findIndex(img => img.id === images[gallery.querySelectorAll('.thumb:not(.loading)').indexOf(thumb)].id));
+        // Find the index of the clicked thumbnail within the *currently displayed* images.
+        // This is important because 'images' array might have more than what's rendered.
+        const allThumbs = Array.from(gallery.querySelectorAll('.thumb:not(.loading)'));
+        const clickedIndexInDOM = allThumbs.indexOf(thumb);
+        
+        // Map back to the original 'images' array based on the data-id, or if not present, assume direct index match.
+        // The current implementation directly uses images[index] so we need to ensure the index is correct.
+        // If images array was cleared and repopulated, the DOM index should map directly.
+        // If you were filtering images on the frontend, this would need to be more complex.
+        showSlide(clickedIndexInDOM);
       }
     });
     gallery.addEventListener('keydown', e => {
       const thumb = e.target.closest('.thumb');
       if ((e.key === 'Enter' || e.key === ' ') && thumb && !thumb.classList.contains('loading')) {
         e.preventDefault();
-        showSlide(images.findIndex(img => img.id === images[gallery.querySelectorAll('.thumb:not(.loading)').indexOf(thumb)].id));
+        const allThumbs = Array.from(gallery.querySelectorAll('.thumb:not(.loading)'));
+        const clickedIndexInDOM = allThumbs.indexOf(thumb);
+        showSlide(clickedIndexInDOM);
       }
     });
 
@@ -1166,15 +1203,44 @@
         return;
       }
       currentSlide = i;
-      slideImg.src = p.file_url || p.sample_url || p.preview_url || '';
-      slideImg.alt = 'Tags: '+p.tags;
+      
+      const imgElement = document.getElementById('slideImg');
+      const videoElement = document.getElementById('slideVideo');
+
+      // Determine if it's a video
+      const fileUrl = p.file_url || p.sample_url || '';
+      const isVideo = /\.(mp4|webm|gif)$/i.test(fileUrl);
+
+      if (isVideo) {
+          imgElement.style.display = 'none';
+          videoElement.style.display = 'block';
+          videoElement.src = fileUrl;
+          videoElement.load(); // Load the video to ensure it's ready
+          videoElement.play(); // Autoplay videos
+      } else {
+          imgElement.style.display = 'block';
+          videoElement.style.display = 'none';
+          videoElement.pause(); // Pause any currently playing video
+          videoElement.removeAttribute('src'); // Clear video source
+          imgElement.src = fileUrl;
+      }
+
+      slideImg.alt = 'Tags: ' + p.tags; // Still use alt for img for general description
       slideTags.innerHTML = '';
       renderTags(p.tags, slideTags); // Render clickable tags in slideshow
       slideshow.classList.add('show');
       slideshow.focus(); // Focus on the slideshow container
-      slideImg.focus(); // Ensure image is focusable for accessibility readers
+      // Focus on the media element itself for better accessibility
+      if (isVideo) {
+          videoElement.focus();
+      } else {
+          imgElement.focus();
+      }
     }
+
     const closeSlide = () => {
+      document.getElementById('slideVideo').pause(); // Ensure video is paused when closing
+      document.getElementById('slideVideo').removeAttribute('src'); // Clear video source
       slideshow.classList.remove('show');
       // Return focus to the element that opened the slideshow
       const activeElement = document.querySelector('.thumb[tabindex="0"]:focus') || document.getElementById('searchBtn');
@@ -1291,11 +1357,28 @@
         div.role = 'listitem'; div.setAttribute('aria-label', `Favorite image with tags: ${post.tags}`);
         div.setAttribute('data-id', post.id); // Add data-id for easier remapping
 
-        const img = document.createElement('img');
-        img.src = post.preview_url || post.sample_url || '';
-        img.alt = post.tags || 'Image';
-        img.loading = "lazy";
-        div.append(img);
+        const fileUrl = post.file_url || post.sample_url || '';
+        const isVideo = /\.(mp4|webm|gif)$/i.test(fileUrl);
+
+        let mediaElement;
+        if (isVideo) {
+            mediaElement = document.createElement('video');
+            mediaElement.src = post.preview_url || ''; // Use preview for thumbnail video
+            mediaElement.loop = true;
+            mediaElement.muted = true;
+            mediaElement.autoplay = false;
+            mediaElement.setAttribute('preload', 'metadata');
+            mediaElement.setAttribute('playsinline', '');
+            mediaElement.onmouseenter = () => mediaElement.play();
+            mediaElement.onmouseleave = () => mediaElement.pause();
+        } else {
+            mediaElement = document.createElement('img');
+            mediaElement.src = post.preview_url || post.sample_url || '';
+        }
+        mediaElement.alt = post.tags || 'Image';
+        mediaElement.loading = "lazy";
+        div.append(mediaElement);
+
         const tagDiv = document.createElement('div');
         tagDiv.className = 'tags';
         renderTags(post.tags, tagDiv); // Render clickable tags
@@ -1310,9 +1393,26 @@
         favoritesGallery.appendChild(div);
       });
       makeFavoritesDraggable(); // Make newly rendered favorites draggable
+      
+      // Separate function for showing favorite slides to ensure it uses the favs array
       function showFavSlide(i) {
-        images = favs; // Temporarily change `images` to `favs` for slideshow navigation
+        // Temporarily set the global 'images' array to 'favs' for the slideshow
+        // This allows the existing showSlide, prevSlide, nextSlide logic to work
+        // without modification for favorites. This is a common pattern for reusability.
+        const originalImages = images; // Save original images array
+        images = favs; // Point to favorites array
+        const originalCurrentSlide = currentSlide; // Save original currentSlide
+
         showSlide(i);
+
+        // When slideshow closes, restore original state
+        slideshow.addEventListener('transitionend', function handler() {
+            if (!slideshow.classList.contains('show')) { // If slideshow is now hidden
+                images = originalImages; // Restore original images array
+                currentSlide = originalCurrentSlide; // Restore original currentSlide
+                slideshow.removeEventListener('transitionend', handler);
+            }
+        });
       }
     }
 
@@ -1342,7 +1442,10 @@
     document.getElementById('closeSlideshow').addEventListener('click', closeSlide);
 
     window.addEventListener('keydown', e => {
-      if (favoritesModal.classList.contains('show') && e.key==='Escape') favoritesModal.classList.remove('show');
+      if (favoritesModal.classList.contains('show') && e.key==='Escape') {
+          e.preventDefault();
+          favoritesModal.classList.remove('show');
+      }
       if (!slideshow.classList.contains('show')) return; // Only process if slideshow is active
       if (e.key==='Escape') { e.preventDefault(); return closeSlide(); }
       if (e.key==='ArrowRight') { e.preventDefault(); return showSlide((currentSlide+1)%images.length); }
@@ -1382,19 +1485,19 @@
     // Swipe/slide for mobile
     let touchStartX = 0, touchEndX = 0, touchStartY = 0, touchEndY = 0;
     let swipeThreshold = 50;
-    slideImg.addEventListener('touchstart', function(e) {
+    slideshow.addEventListener('touchstart', function(e) { // Changed to slideshow element for wider touch area
       if (e.touches.length === 1) {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
       }
     }, { passive: true });
-    slideImg.addEventListener('touchmove', function(e) {
+    slideshow.addEventListener('touchmove', function(e) { // Changed to slideshow element
       if (e.touches.length === 1) {
         touchEndX = e.touches[0].clientX;
         touchEndY = e.touches[0].clientY;
       }
     }, { passive: true });
-    slideImg.addEventListener('touchend', function(e) {
+    slideshow.addEventListener('touchend', function(e) { // Changed to slideshow element
       let dx = touchEndX - touchStartX;
       let dy = touchEndY - touchStartY;
       // Only consider horizontal swipes, and check against a minimum vertical movement to prevent accidental swipes during scroll attempts
