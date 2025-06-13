@@ -67,28 +67,35 @@ export default async function handler(req, res) {
     const rawTags = typeof req.query.tags === 'string' ? req.query.tags : '';
     const tags = sanitizeTags(rawTags);
 
-    // If tags are required, uncomment the following:
-    // if (!tags) return res.status(400).json({ error: 'At least one valid tag is required.' });
+    // Source selection (default: gelbooru)
+    const source = req.query.source === 'danbooru' ? 'danbooru' : 'gelbooru';
 
-    // Caching: Use tags, page, and limit as cache key
-    const cacheKey = `${tags}-${safePage}-${safeLimit}`;
+    // Cache key should include source
+    const cacheKey = `${source}-${tags}-${safePage}-${safeLimit}`;
     const cached = getCache(cacheKey);
     if (cached) {
       return res.status(200).json({ post: cached });
     }
 
-    // Build Gelbooru API URL
-    const url = `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=${encodeURIComponent(tags)}&pid=${safePage}&limit=${safeLimit}`;
+    // Build API URL
+    let url;
+    if (source === 'danbooru') {
+      // Danbooru: pages are 1-based, not 0-based
+      url = `https://danbooru.donmai.us/posts.json?tags=${encodeURIComponent(tags)}&page=${safePage + 1}&limit=${safeLimit}`;
+    } else {
+      // Gelbooru
+      url = `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=${encodeURIComponent(tags)}&pid=${safePage}&limit=${safeLimit}`;
+    }
 
-    // Fetch from Gelbooru API
+    // Fetch from API
     const response = await fetch(url);
     const contentType = response.headers.get('content-type') || '';
     if (!response.ok) {
       const errText = contentType.includes('application/json')
         ? JSON.stringify(await response.json())
         : await response.text();
-      console.error('Gelbooru error:', response.status, errText);
-      return res.status(response.status).json({ error: `Gelbooru responded with status ${response.status}` });
+      console.error(`${source} error:`, response.status, errText);
+      return res.status(response.status).json({ error: `${source} responded with status ${response.status}` });
     }
 
     // Parse JSON, handle errors
@@ -96,23 +103,33 @@ export default async function handler(req, res) {
     try {
       data = await response.json();
     } catch (parseError) {
-      console.error('Failed to parse Gelbooru JSON:', parseError);
-      return res.status(502).json({ error: 'Gelbooru returned invalid JSON.' });
+      console.error(`Failed to parse ${source} JSON:`, parseError);
+      return res.status(502).json({ error: `${source} returned invalid JSON.` });
     }
 
-    // Defensive: Ensure .post is always an array
-    const posts = Array.isArray(data?.post)
-      ? data.post
-      : (data?.post ? [data.post] : []);
-
-    // Robust mapping, handle missing values gracefully
-    const mapped = posts.map(p => ({
-      id: p.id ?? null,
-      tags: p.tags || '',
-      preview_url: p.preview_url || '',
-      file_url: p.file_url || p.sample_url || '',
-      sample_url: p.sample_url || ''
-    }));
+    // Data mapping
+    let posts, mapped;
+    if (source === 'danbooru') {
+      posts = Array.isArray(data) ? data : [];
+      mapped = posts.map(p => ({
+        id: p.id ?? null,
+        tags: p.tag_string || '',
+        preview_url: p.preview_file_url ? `https://danbooru.donmai.us${p.preview_file_url}` : '',
+        file_url: p.file_url ? `https://danbooru.donmai.us${p.file_url}` : '',
+        sample_url: p.large_file_url ? `https://danbooru.donmai.us${p.large_file_url}` : ''
+      }));
+    } else {
+      posts = Array.isArray(data?.post)
+        ? data.post
+        : (data?.post ? [data.post] : []);
+      mapped = posts.map(p => ({
+        id: p.id ?? null,
+        tags: p.tags || '',
+        preview_url: p.preview_url || '',
+        file_url: p.file_url || p.sample_url || '',
+        sample_url: p.sample_url || ''
+      }));
+    }
 
     // Store in cache
     setCache(cacheKey, mapped);
