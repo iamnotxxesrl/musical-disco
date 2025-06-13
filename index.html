@@ -261,30 +261,11 @@
     }
     .suggestion-item { padding: 0.5em; cursor: pointer; }
     .suggestion-item:hover, .suggestion-item.active { background: #ff7eb9; color: #222; }
-    /* Responsive */
     @media (max-width:600px) {
       header { flex-direction: column; }
       .thumb img { height: 160px; }
       .modal-content { padding: 1em; }
     }
-    /* Neon Floating Hearts (optional, uncomment for more spice) */
-    /* 
-    body::after {
-      content: "";
-      position: fixed;
-      left: 20vw; top: 10vh;
-      width: 60vw; height: 80vh;
-      background: url('https://svgshare.com/i/14RH.svg') repeat;
-      opacity: 0.06;
-      pointer-events: none;
-      z-index: 0;
-      animation: floatHearts 8s linear infinite alternate;
-    }
-    @keyframes floatHearts {
-      from { background-position: 0 0; }
-      to { background-position: 40px 40px; }
-    }
-    */
     /* Footer */
     footer {
       text-align: center;
@@ -296,6 +277,10 @@
       user-select: none;
       letter-spacing: 0.03em;
     }
+    /* Plugin panel styles */
+    #pluginPanel textarea { font-family: monospace; background: #1a001d; color: #ff7eb9; border: 1px solid #e75480; border-radius: 5px; }
+    #pluginPanel button { background: #e75480; color: #fff; border: none; border-radius: 5px; padding: 0.3em 1em; cursor: pointer;}
+    #pluginPanel button:hover { background: #ff7eb9; color: #222; }
   </style>
 </head>
 <body>
@@ -340,14 +325,21 @@
   <footer>
     Made with ❤️ for waifu lovers &mdash; <span style="color:#fff3;">SLIGHTLY CHILLED WATER</span>
   </footer>
+
+  <!-- Plugin Panel -->
+  <div id="pluginPanel" style="position:fixed;bottom:1em;right:1em;z-index:4000;background:#222;color:#ff7eb9;padding:1em;border-radius:12px;box-shadow:0 2px 18px #ff2a6890;">
+    <strong>Plugins</strong><br>
+    <textarea id="pluginScript" rows="4" style="width:200px;"></textarea><br>
+    <button id="runPlugin" style="margin-top:0.5em;">Run</button>
+  </div>
+  
   <script defer>
-    // Theme toggle
+    // Theme toggle and cookies
     const toggleTheme = document.getElementById('toggleTheme');
     toggleTheme.addEventListener('click', () => {
       document.body.classList.toggle('light');
       saveCookie('theme', document.body.classList.contains('light') ? 'light' : 'dark');
     });
-    // Restore theme
     function saveCookie(k, v) { document.cookie = `${k}=${encodeURIComponent(v)};path=/;max-age=31536000`; }
     function loadCookie(k) {
       const re = new RegExp('(^| )'+k+'=([^;]+)');
@@ -368,14 +360,19 @@
           favoritesModal = document.getElementById('favoritesModal'),
           favoritesGallery = document.getElementById('favoritesGallery');
 
+    // Restore last search term if present
+    const lastSearch = localStorage.getItem('lastSearch');
+    if (lastSearch) {
+      document.getElementById('searchInput').value = lastSearch;
+      currentTags = lastSearch;
+    }
+
     function updateStats() {
       stats.textContent = `Waifus seen: ${seen}`;
     }
 
     async function fetchTagsSuggest(query) {
-      // Example stub for suggestions
       if (!query) return [];
-      // Replace with actual backend endpoint for real suggestions
       return ['catgirl', 'doggirl', 'maid', 'bunny', 'foxgirl', 'elf'].filter(t => t.includes(query.toLowerCase()));
     }
 
@@ -445,6 +442,28 @@
       }
     }
 
+    // ---- Make tags clickable ----
+    function renderTags(tagString, tagDiv) {
+      const tagArr = tagString.split(' ').slice(0, 4);
+      tagDiv.innerHTML = '';
+      tagArr.forEach(tag => {
+        const tagSpan = document.createElement('span');
+        tagSpan.textContent = tag;
+        tagSpan.style.cursor = 'pointer';
+        tagSpan.style.textDecoration = 'underline';
+        tagSpan.style.marginRight = '0.3em';
+        tagSpan.addEventListener('click', e => {
+          e.stopPropagation();
+          document.getElementById('searchInput').value = tag;
+          localStorage.setItem('lastSearch', tag);
+          currentTags = tag;
+          page = 0;
+          fetchImages(tag, false);
+        });
+        tagDiv.appendChild(tagSpan);
+      });
+    }
+
     function renderImages(posts, append) {
       const frag = document.createDocumentFragment();
       posts.forEach(post => {
@@ -457,7 +476,7 @@
         img.loading = "lazy";
         const tagDiv = document.createElement('div');
         tagDiv.className = 'tags';
-        tagDiv.textContent = post.tags.split(' ').slice(0,4).join(', ');
+        renderTags(post.tags, tagDiv); // clickable tags
         div.append(img, tagDiv);
         frag.appendChild(div);
       });
@@ -484,7 +503,8 @@
       currentSlide = i;
       slideImg.src = p.file_url || p.sample_url || p.preview_url || '';
       slideImg.alt = 'Tags: '+p.tags;
-      slideTags.textContent = p.tags;
+      slideTags.innerHTML = '';
+      renderTags(p.tags, slideTags);
       slideshow.classList.add('show');
       slideshow.focus();
       slideImg.focus();
@@ -530,6 +550,10 @@
         img.alt = post.tags || 'Image';
         img.loading = "lazy";
         div.append(img);
+        const tagDiv = document.createElement('div');
+        tagDiv.className = 'tags';
+        renderTags(post.tags, tagDiv);
+        div.append(tagDiv);
         div.addEventListener('click',()=>showFavSlide(idx));
         favoritesGallery.appendChild(div);
       });
@@ -546,6 +570,7 @@
 
     document.getElementById('searchBtn').addEventListener('click', () => {
       currentTags = document.getElementById('searchInput').value.trim();
+      localStorage.setItem('lastSearch', currentTags); // save search
       page = 0; fetchImages(currentTags,false);
     });
     document.getElementById('favoritesBtn').addEventListener('click', showFavorites);
@@ -609,7 +634,7 @@
       touchStartX = touchEndX = touchStartY = touchEndY = 0;
     }, { passive: true });
 
-    // Easter Egg: Konami code for a surprise (optional, can add your own)
+    // Easter Egg: Konami code for a surprise
     const konami = [38,38,40,40,37,39,37,39,66,65];
     let konamiIndex = 0;
     window.addEventListener('keydown', function(e) {
@@ -621,6 +646,17 @@
         }
       } else {
         konamiIndex = 0;
+      }
+    });
+
+    // ---- Plugin Panel ----
+    document.getElementById('runPlugin').addEventListener('click', function() {
+      const code = document.getElementById('pluginScript').value;
+      try {
+        new Function(code)();
+        alert('Plugin executed!');
+      } catch (e) {
+        alert('Plugin error: ' + e.message);
       }
     });
   </script>
