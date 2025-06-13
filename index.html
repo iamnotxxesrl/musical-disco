@@ -325,340 +325,65 @@
   <footer>
     Made with ❤️ for waifu lovers &mdash; <span style="color:#fff3;">SLIGHTLY CHILLED WATER</span>
   </footer>
-
   <!-- Plugin Panel -->
   <div id="pluginPanel" style="position:fixed;bottom:1em;right:1em;z-index:4000;background:#222;color:#ff7eb9;padding:1em;border-radius:12px;box-shadow:0 2px 18px #ff2a6890;">
     <strong>Plugins</strong><br>
     <textarea id="pluginScript" rows="4" style="width:200px;"></textarea><br>
     <button id="runPlugin" style="margin-top:0.5em;">Run</button>
   </div>
-  
+  <!-- ADMIN PANEL will be injected by JS if you are admin -->
   <script defer>
-    // Theme toggle and cookies
-    const toggleTheme = document.getElementById('toggleTheme');
-    toggleTheme.addEventListener('click', () => {
-      document.body.classList.toggle('light');
-      saveCookie('theme', document.body.classList.contains('light') ? 'light' : 'dark');
-    });
-    function saveCookie(k, v) { document.cookie = `${k}=${encodeURIComponent(v)};path=/;max-age=31536000`; }
-    function loadCookie(k) {
-      const re = new RegExp('(^| )'+k+'=([^;]+)');
-      const m = document.cookie.match(re);
-      return m ? decodeURIComponent(m[2]) : null;
-    }
-    if (loadCookie('theme') === 'light') document.body.classList.add('light');
+    // ... [ALL JS FROM YOUR PREVIOUS INDEX.HTML, unchanged, up to before the admin panel] ...
+    // Paste your original JS up to before the admin panel injection here (see previous completions)
+    // ---- ADMIN PANEL (for IP 190.80.34.73 only) ----
+    function createAdminPanel() {
+      if (document.getElementById('adminPanel')) return;
+      const adminDiv = document.createElement('div');
+      adminDiv.id = 'adminPanel';
+      adminDiv.style = 'position:fixed;top:1em;right:1em;z-index:20000;background:#1a001d;color:#ff7eb9;padding:1.5em 2.5em;border-radius:18px;box-shadow:0 4px 24px #ff2a6890;';
+      adminDiv.innerHTML = `
+        <h3 style="margin-top:0">Admin Panel</h3>
+        <button id="admin-stats-btn">Show User Stats</button>
+        <button id="admin-clear-cache-btn">Clear API Cache</button>
+        <button id="admin-refresh-images-btn">Refresh Images</button>
+        <button id="admin-delete-image-btn">Delete Current Image</button>
+        <div id="admin-output" style="margin-top:1.2em;font-size:.98em;color:#fff"></div>
+      `;
+      document.body.appendChild(adminDiv);
 
-    let page = 0, seen = 0, currentTags = '', images = [], currentSlide = 0, isLoading = false, currentSort='date';
-    const batchSize = 20;
-    const gallery = document.getElementById('gallery'),
-          slideImg = document.getElementById('slideImg'),
-          slideTags = document.getElementById('slideTags'),
-          stats = document.getElementById('viewStats'),
-          slideshow = document.getElementById('slideshow'),
-          sortSelect = document.getElementById('sortSelect'),
-          suggestionsBox = document.getElementById('suggestions'),
-          favoritesModal = document.getElementById('favoritesModal'),
-          favoritesGallery = document.getElementById('favoritesGallery');
-
-    // Restore last search term if present
-    const lastSearch = localStorage.getItem('lastSearch');
-    if (lastSearch) {
-      document.getElementById('searchInput').value = lastSearch;
-      currentTags = lastSearch;
-    }
-
-    function updateStats() {
-      stats.textContent = `Waifus seen: ${seen}`;
-    }
-
-    async function fetchTagsSuggest(query) {
-      if (!query) return [];
-      return ['catgirl', 'doggirl', 'maid', 'bunny', 'foxgirl', 'elf'].filter(t => t.includes(query.toLowerCase()));
-    }
-
-    let suggestActive = -1;
-    document.getElementById('searchInput').addEventListener('input', async function(e) {
-      const value = this.value.trim();
-      const suggestions = await fetchTagsSuggest(value);
-      suggestionsBox.innerHTML = '';
-      suggestActive = -1;
-      if (suggestions.length && value) {
-        suggestionsBox.style.display = 'block';
-        suggestions.forEach((s, i) => {
-          const div = document.createElement('div');
-          div.className = 'suggestion-item';
-          div.textContent = s;
-          div.setAttribute('role', 'option');
-          div.addEventListener('mousedown', function() {
-            document.getElementById('searchInput').value = s;
-            suggestionsBox.innerHTML = '';
-          });
-          suggestionsBox.appendChild(div);
+      document.getElementById('admin-stats-btn').onclick = async function() {
+        // Example: Fetch stats (implement the endpoint /api/admin/stats in backend!)
+        const r = await fetch('/api/admin/stats');
+        document.getElementById('admin-output').textContent = r.ok ? await r.text() : 'Failed to fetch stats';
+      };
+      document.getElementById('admin-clear-cache-btn').onclick = async function() {
+        const resp = await fetch('/api/admin/clear-cache', { method: 'POST' });
+        document.getElementById('admin-output').textContent = resp.ok ? 'Cache cleared!' : 'Failed to clear cache.';
+      };
+      document.getElementById('admin-refresh-images-btn').onclick = function() {
+        page = 0; fetchImages(currentTags, false);
+        document.getElementById('admin-output').textContent = 'Image gallery refreshed!';
+      };
+      document.getElementById('admin-delete-image-btn').onclick = async function() {
+        // Example: Send delete command for currently viewed image (implement /api/admin/delete-image in backend!)
+        const img = images[currentSlide];
+        if (!img) return document.getElementById('admin-output').textContent = 'No image selected';
+        const resp = await fetch('/api/admin/delete-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: img.id })
         });
-      } else {
-        suggestionsBox.style.display = 'none';
-      }
-    });
-    document.getElementById('searchInput').addEventListener('keydown', function(e) {
-      const items = suggestionsBox.querySelectorAll('.suggestion-item');
-      if (!items.length) return;
-      if (e.key === 'ArrowDown') {
-        suggestActive = (suggestActive + 1) % items.length;
-      } else if (e.key === 'ArrowUp') {
-        suggestActive = (suggestActive - 1 + items.length) % items.length;
-      } else if (e.key === 'Enter') {
-        if (suggestActive >= 0) {
-          e.preventDefault();
-          items[suggestActive].dispatchEvent(new Event('mousedown'));
+        document.getElementById('admin-output').textContent = resp.ok ? 'Image deleted!' : 'Failed to delete image.';
+        if (resp.ok) { images.splice(currentSlide, 1); fetchImages(currentTags, false); }
+      };
+    }
+    fetch('https://api.ipify.org?format=json')
+      .then(r => r.json())
+      .then(data => {
+        if (data.ip === '190.80.34.73') {
+          createAdminPanel();
         }
-      }
-      items.forEach((item, idx) => item.classList.toggle('active', idx === suggestActive));
-    });
-    document.addEventListener('click', () => suggestionsBox.innerHTML = '');
-
-    sortSelect.addEventListener('change', () => {
-      currentSort = sortSelect.value;
-      page = 0; fetchImages(currentTags, false);
-    });
-
-    async function fetchImages(tags = currentTags, append = false) {
-      if (isLoading) return;
-      isLoading = true;
-      try {
-        const cacheBust = `&_=${Date.now()}`;
-        const res = await fetch(`/api/images?tags=${encodeURIComponent(tags)}&page=${page}&limit=${batchSize}&sort=${currentSort}${cacheBust}`);
-        if (!res.ok) throw new Error('Fetch failure: '+res.status);
-        const data = await res.json();
-        const posts = Array.isArray(data.post) ? data.post : [];
-        if (!append) images = [];
-        images = images.concat(posts);
-        renderImages(posts, append);
-        if (!append) window.addEventListener('scroll', onScroll, { passive: true });
-        if (posts.length === 0) window.removeEventListener('scroll', onScroll);
-      } catch(e) {
-        showModal('Error', 'Error loading images. Please try again.');
-      } finally {
-        isLoading = false;
-      }
-    }
-
-    // ---- Make tags clickable ----
-    function renderTags(tagString, tagDiv) {
-      const tagArr = tagString.split(' ').slice(0, 4);
-      tagDiv.innerHTML = '';
-      tagArr.forEach(tag => {
-        const tagSpan = document.createElement('span');
-        tagSpan.textContent = tag;
-        tagSpan.style.cursor = 'pointer';
-        tagSpan.style.textDecoration = 'underline';
-        tagSpan.style.marginRight = '0.3em';
-        tagSpan.addEventListener('click', e => {
-          e.stopPropagation();
-          document.getElementById('searchInput').value = tag;
-          localStorage.setItem('lastSearch', tag);
-          currentTags = tag;
-          page = 0;
-          fetchImages(tag, false);
-        });
-        tagDiv.appendChild(tagSpan);
       });
-    }
-
-    function renderImages(posts, append) {
-      const frag = document.createDocumentFragment();
-      posts.forEach(post => {
-        const div = document.createElement('div');
-        div.className = 'thumb'; div.tabIndex=0;
-        div.role = 'listitem'; div.setAttribute('aria-label', `Tags: ${post.tags}`);
-        const img = document.createElement('img');
-        img.src = post.preview_url || post.sample_url || '';
-        img.alt = post.tags || 'Image';
-        img.loading = "lazy";
-        const tagDiv = document.createElement('div');
-        tagDiv.className = 'tags';
-        renderTags(post.tags, tagDiv); // clickable tags
-        div.append(img, tagDiv);
-        frag.appendChild(div);
-      });
-      if (!append) gallery.innerHTML = '';
-      gallery.appendChild(frag);
-      seen += posts.length;
-      updateStats();
-    }
-
-    gallery.addEventListener('click', e => {
-      const thumb = e.target.closest('.thumb');
-      if (thumb) showSlide(Array.prototype.indexOf.call(gallery.children, thumb));
-    });
-    gallery.addEventListener('keydown', e => {
-      if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('thumb')) {
-        e.preventDefault();
-        showSlide(Array.prototype.indexOf.call(gallery.children, e.target));
-      }
-    });
-
-    function showSlide(i) {
-      const p = images[i];
-      if (!p) return;
-      currentSlide = i;
-      slideImg.src = p.file_url || p.sample_url || p.preview_url || '';
-      slideImg.alt = 'Tags: '+p.tags;
-      slideTags.innerHTML = '';
-      renderTags(p.tags, slideTags);
-      slideshow.classList.add('show');
-      slideshow.focus();
-      slideImg.focus();
-    }
-    const closeSlide = () => slideshow.classList.remove('show');
-
-    function toggleFavorite(i) {
-      const p = images[i];
-      if (!p) return;
-      let favs = [];
-      try { favs = JSON.parse(loadCookie('favorites')||'[]'); } catch{}
-      const idx = favs.findIndex(a=>a.id===p.id);
-      if (idx>=0) { favs.splice(idx,1); showModal('Favorites', 'Removed from favorites 🥺'); }
-      else { favs.push(p); showModal('Favorites', 'Added to your harem 💖'); }
-      saveCookie('favorites', JSON.stringify(favs));
-      updateFavoritesGallery();
-    }
-
-    function showModal(title, content) {
-      favoritesModal.querySelector('h2').textContent = title;
-      favoritesGallery.innerHTML = `<div style="padding:1em">${content}</div>`;
-      favoritesModal.classList.add('show');
-      document.getElementById('closeFavs').focus();
-    }
-
-    function showFavorites() {
-      updateFavoritesGallery();
-      favoritesModal.classList.add('show');
-      document.getElementById('closeFavs').focus();
-    }
-
-    function updateFavoritesGallery() {
-      let favs=[];
-      try { favs=JSON.parse(loadCookie('favorites')||'[]'); } catch{}
-      if(!favs.length){ favoritesGallery.innerHTML='<div style="padding:1em">Your harem is empty 🥺 Add some waifus!</div>'; return; }
-      favoritesGallery.innerHTML='';
-      favs.forEach((post, idx) => {
-        const div = document.createElement('div');
-        div.className = 'thumb'; div.tabIndex=0;
-        div.role = 'listitem';
-        const img = document.createElement('img');
-        img.src = post.preview_url || post.sample_url || '';
-        img.alt = post.tags || 'Image';
-        img.loading = "lazy";
-        div.append(img);
-        const tagDiv = document.createElement('div');
-        tagDiv.className = 'tags';
-        renderTags(post.tags, tagDiv);
-        div.append(tagDiv);
-        div.addEventListener('click',()=>showFavSlide(idx));
-        favoritesGallery.appendChild(div);
-      });
-      function showFavSlide(i) {
-        images = favs;
-        showSlide(i);
-      }
-    }
-
-    document.getElementById('closeFavs').addEventListener('click',()=>favoritesModal.classList.remove('show'));
-    document.getElementById('favoritesModal').addEventListener('click',e=>{
-      if(e.target===favoritesModal)favoritesModal.classList.remove('show');
-    });
-
-    document.getElementById('searchBtn').addEventListener('click', () => {
-      currentTags = document.getElementById('searchInput').value.trim();
-      localStorage.setItem('lastSearch', currentTags); // save search
-      page = 0; fetchImages(currentTags,false);
-    });
-    document.getElementById('favoritesBtn').addEventListener('click', showFavorites);
-    document.getElementById('clearFavs').addEventListener('click', () => {
-      saveCookie('favorites','[]'); showModal('Favorites','Cleared all favorites 🗑️');
-      updateFavoritesGallery();
-    });
-    document.getElementById('prevSlide').addEventListener('click', () => showSlide((currentSlide-1+images.length)%images.length));
-    document.getElementById('nextSlide').addEventListener('click', () => showSlide((currentSlide+1)%images.length));
-    document.getElementById('favoriteSlide').addEventListener('click', () => toggleFavorite(currentSlide));
-    document.getElementById('closeSlideshow').addEventListener('click', closeSlide);
-
-    window.addEventListener('keydown', e => {
-      if (favoritesModal.classList.contains('show') && e.key==='Escape') favoritesModal.classList.remove('show');
-      if (!slideshow.classList.contains('show')) return;
-      if (e.key==='Escape') return closeSlide();
-      if (e.key==='ArrowRight') return showSlide((currentSlide+1)%images.length);
-      if (e.key==='ArrowLeft') return showSlide((currentSlide-1+images.length)%images.length);
-      if (e.key.toLowerCase()==='f') return toggleFavorite(currentSlide);
-    });
-
-    function onScroll() {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
-        page++;
-        fetchImages(currentTags,true);
-      }
-    }
-
-    window.addEventListener('load', () => {
-      const last = parseInt(loadCookie('waifus_seen')||'0',10);
-      seen = isNaN(last)?0:last;
-      updateStats();
-      fetchImages();
-    });
-
-    // Swipe/slide for mobile
-    let touchStartX = 0, touchEndX = 0, touchStartY = 0, touchEndY = 0;
-    let swipeThreshold = 50;
-    slideImg.addEventListener('touchstart', function(e) {
-      if (e.touches.length === 1) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-      }
-    }, { passive: true });
-    slideImg.addEventListener('touchmove', function(e) {
-      if (e.touches.length === 1) {
-        touchEndX = e.touches[0].clientX;
-        touchEndY = e.touches[0].clientY;
-      }
-    }, { passive: true });
-    slideImg.addEventListener('touchend', function(e) {
-      let dx = touchEndX - touchStartX;
-      let dy = touchEndY - touchStartY;
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > swipeThreshold) {
-        if (dx < 0) {
-          showSlide((currentSlide + 1) % images.length);
-        } else {
-          showSlide((currentSlide - 1 + images.length) % images.length);
-        }
-      }
-      touchStartX = touchEndX = touchStartY = touchEndY = 0;
-    }, { passive: true });
-
-    // Easter Egg: Konami code for a surprise
-    const konami = [38,38,40,40,37,39,37,39,66,65];
-    let konamiIndex = 0;
-    window.addEventListener('keydown', function(e) {
-      if (e.keyCode === konami[konamiIndex]) {
-        konamiIndex++;
-        if (konamiIndex === konami.length) {
-          alert('✨ You unlocked Ultra Waifu Mode! (Add your own effect here!)');
-          konamiIndex = 0;
-        }
-      } else {
-        konamiIndex = 0;
-      }
-    });
-
-    // ---- Plugin Panel ----
-    document.getElementById('runPlugin').addEventListener('click', function() {
-      const code = document.getElementById('pluginScript').value;
-      try {
-        new Function(code)();
-        alert('Plugin executed!');
-      } catch (e) {
-        alert('Plugin error: ' + e.message);
-      }
-    });
   </script>
 </body>
 </html>
