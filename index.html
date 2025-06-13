@@ -4,6 +4,8 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gelbooru Viewer</title>
+  <!-- Preconnect for faster API calls -->
+  <link rel="preconnect" href="/api/images">
   <style>
     body { font-family:'Segoe UI',sans-serif; margin:0; background:#111; color:#fff; }
     header { padding:1rem; background:#222; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; }
@@ -12,13 +14,13 @@
     header button { background:#444; color:#fff; cursor:pointer; }
     header button:hover { background:#666; }
     .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; padding:1rem; }
-    .thumb { position:relative; overflow:hidden; border-radius:10px; cursor:pointer; transition:transform 0.3s; background:#1e1e1e; }
+    .thumb { position:relative; overflow:hidden; border-radius:10px; cursor:pointer; transition:transform 0.3s; background:#1e1e1e; will-change:transform; }
     .thumb:hover { transform:scale(1.03); }
     .thumb img { width:100%; height:220px; object-fit:cover; user-select:none; }
     .tags { position:absolute; bottom:0; width:100%; background:rgba(0,0,0,0.6); color:#ccc; font-size:12px; padding:6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    #slideshow { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.98); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:1000; padding:1rem; box-sizing:border-box; }
+    #slideshow { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.98); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:100; }
     #slideshow.show { display:flex; }
-    #slideImg { max-width:90vw; max-height:85vh; border-radius:12px; box-shadow:0 0 30px #000; transition:opacity 0.4s ease; user-select:none; }
+    #slideImg { max-width:90vw; max-height:85vh; border-radius:12px; box-shadow:0 0 30px #000; transition:opacity 0.4s ease; user-select:none; touch-action:pan-y; }
     #slideTags { color:#ccc; margin-top:0.7rem; max-width:80vw; text-align:center; word-wrap:break-word; user-select:text; }
     .slideshow-controls { margin-top:0.8rem; display:flex; gap:0.5rem; }
     .slideshow-controls button { background:#444; color:#fff; border:none; padding:0.5rem 1rem; border-radius:8px; font-size:1.2rem; cursor:pointer; transition:background-color 0.3s; }
@@ -40,7 +42,9 @@
     </div>
     <div class="stats" id="viewStats">Waifus seen: 0</div>
   </header>
-  <main><div class="gallery" id="gallery" role="list" aria-label="Image gallery"></div></main>
+  <main>
+    <div class="gallery" id="gallery" role="list" aria-label="Image gallery"></div>
+  </main>
   <div class="info">Uses cookies for favorites and stats. Infinite scroll enabled.</div>
   <div id="slideshow" role="dialog" aria-modal="true" aria-label="Image slideshow">
     <img id="slideImg" alt="Slideshow image"/>
@@ -53,8 +57,8 @@
     </div>
   </div>
 
-  <script>
-    // No eval(), no new Function(), no string-based timers
+  <!-- Defer script for non-blocking load -->
+  <script defer>
     let page = 0, seen = 0, currentTags = '', images = [], currentSlide = 0, isLoading = false;
     const batchSize = 20;
     const gallery = document.getElementById('gallery'),
@@ -79,14 +83,16 @@
       if (isLoading) return;
       isLoading = true;
       try {
-        const res = await fetch(`/api/images?tags=${encodeURIComponent(tags)}&page=${page}&limit=${batchSize}`);
+        // Cache busting parameter to avoid stale images
+        const cacheBust = `&_=${Date.now()}`;
+        const res = await fetch(`/api/images?tags=${encodeURIComponent(tags)}&page=${page}&limit=${batchSize}${cacheBust}`);
         if (!res.ok) throw new Error('Fetch failure: '+res.status);
         const data = await res.json();
         const posts = Array.isArray(data.post) ? data.post : [];
         if (!append) images = [];
         images = images.concat(posts);
         renderImages(posts, append);
-        if (!append) window.addEventListener('scroll', onScroll);
+        if (!append) window.addEventListener('scroll', onScroll, { passive: true }); // passive for better perf
         if (posts.length === 0) window.removeEventListener('scroll', onScroll);
       } catch(e) {
         console.error(e);
@@ -97,7 +103,8 @@
     }
 
     function renderImages(posts, append) {
-      if (!append) gallery.innerHTML = '';
+      // Batch DOM updates using DocumentFragment for performance
+      const frag = document.createDocumentFragment();
       posts.forEach(post => {
         const div = document.createElement('div');
         div.className = 'thumb'; div.tabIndex=0;
@@ -105,17 +112,30 @@
         const img = document.createElement('img');
         img.src = post.preview_url || post.sample_url || '';
         img.alt = post.tags || 'Image';
+        img.loading = "lazy"; // Native lazy loading!
         const tagDiv = document.createElement('div');
         tagDiv.className = 'tags';
         tagDiv.textContent = post.tags.split(' ').slice(0,4).join(', ');
         div.append(img, tagDiv);
-        div.addEventListener('click', () => showSlide(images.indexOf(post)));
-        div.addEventListener('keydown', e => { if (['Enter',' '].includes(e.key)) { e.preventDefault(); showSlide(images.indexOf(post)) } });
-        gallery.appendChild(div);
+        frag.appendChild(div);
       });
+      if (!append) gallery.innerHTML = '';
+      gallery.appendChild(frag);
       seen += posts.length;
       updateStats();
     }
+
+    // Efficient event delegation for gallery clicks & keydowns
+    gallery.addEventListener('click', e => {
+      const thumb = e.target.closest('.thumb');
+      if (thumb) showSlide(Array.prototype.indexOf.call(gallery.children, thumb));
+    });
+    gallery.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('thumb')) {
+        e.preventDefault();
+        showSlide(Array.prototype.indexOf.call(gallery.children, e.target));
+      }
+    });
 
     function showSlide(i) {
       const p = images[i];
@@ -160,6 +180,7 @@
     document.getElementById('nextSlide').addEventListener('click', () => showSlide((currentSlide+1)%images.length));
     document.getElementById('favoriteSlide').addEventListener('click', () => toggleFavorite(currentSlide));
     document.getElementById('closeSlideshow').addEventListener('click', closeSlide);
+
     window.addEventListener('keydown', e => {
       if (!slideshow.classList.contains('show')) return;
       if (e.key==='Escape') return closeSlide();
@@ -181,6 +202,34 @@
       updateStats();
       fetchImages();
     });
+
+    // Swipe/slide for mobile
+    let touchStartX = 0, touchEndX = 0, touchStartY = 0, touchEndY = 0;
+    let swipeThreshold = 50;
+    slideImg.addEventListener('touchstart', function(e) {
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+    slideImg.addEventListener('touchmove', function(e) {
+      if (e.touches.length === 1) {
+        touchEndX = e.touches[0].clientX;
+        touchEndY = e.touches[0].clientY;
+      }
+    }, { passive: true });
+    slideImg.addEventListener('touchend', function(e) {
+      let dx = touchEndX - touchStartX;
+      let dy = touchEndY - touchStartY;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > swipeThreshold) {
+        if (dx < 0) {
+          showSlide((currentSlide + 1) % images.length);
+        } else {
+          showSlide((currentSlide - 1 + images.length) % images.length);
+        }
+      }
+      touchStartX = touchEndX = touchStartY = touchEndY = 0;
+    }, { passive: true });
   </script>
 </body>
 </html>
