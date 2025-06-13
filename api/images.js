@@ -1,36 +1,33 @@
 // api/images.js
 
-// --- Simple in-memory rate limiter (per IP, per minute) ---
-const rateLimit = {};
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 30; // Max requests per window per IP
+import Redis from 'ioredis';
+import fetch from 'node-fetch';
+import { Agent } from 'https';
 
-function isRateLimited(ip) {
-  const now = Date.now();
-  if (!rateLimit[ip]) rateLimit[ip] = [];
-  // Remove timestamps older than window
-  rateLimit[ip] = rateLimit[ip].filter(ts => now - ts < RATE_LIMIT_WINDOW);
-  if (rateLimit[ip].length >= RATE_LIMIT_MAX) return true;
-  rateLimit[ip].push(now);
-  return false;
-}
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+const httpAgent = new Agent({ keepAlive: true });
 
-// --- Simple in-memory response cache (per query) ---
-const cache = new Map();
-const CACHE_TTL = 60 * 1000; // 1 minute
+const RATE_LIMIT_WINDOW = parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX) || 30; // Max requests per window per IP
+const CACHE_TTL = parseInt(process.env.CACHE_TTL_SEC) || 60; // Cache TTL in seconds
 
-function getCache(key) {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.ts > CACHE_TTL) {
-    cache.delete(key);
-    return null;
+// --- Redis Rate Limiter ---
+async function isRateLimited(ip) {
+  const key = `ratelimit:${ip}`;
+  const current = await redis.incr(key);
+  if (current === 1) {
+    await redis.pexpire(key, RATE_LIMIT_WINDOW);
   }
-  return entry.value;
+  return current > RATE_LIMIT_MAX;
 }
 
-function setCache(key, value) {
-  cache.set(key, { value, ts: Date.now() });
+// --- Redis Cache ---
+async function getCache(key) {
+  const data = await redis.get(`cache:${key}`);
+  return data ? JSON.parse(data) : null;
+}
+async function setCache(key, value) {
+  await redis.set(`cache:${key}`, JSON.stringify(value), 'EX', CACHE_TTL);
 }
 
 // --- Tag sanitization: only safe characters, limit tag count ---
@@ -53,7 +50,7 @@ export default async function handler(req, res) {
       req.headers['x-forwarded-for']?.split(',')[0] ||
       req.connection?.remoteAddress ||
       '';
-    if (isRateLimited(ip)) {
+    if (await isRateLimited(ip)) {
       return res.status(429).json({ error: 'Too many requests. Please try again later.' });
     }
 
@@ -72,8 +69,9 @@ export default async function handler(req, res) {
 
     // Cache key should include source
     const cacheKey = `${source}-${tags}-${safePage}-${safeLimit}`;
-    const cached = getCache(cacheKey);
+    const cached = await getCache(cacheKey);
     if (cached) {
+      // Optionally add pagination metadata here if needed
       return res.status(200).json({ post: cached });
     }
 
@@ -87,8 +85,8 @@ export default async function handler(req, res) {
       url = `https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=${encodeURIComponent(tags)}&pid=${safePage}&limit=${safeLimit}`;
     }
 
-    // Fetch from API
-    const response = await fetch(url);
+    // Fetch from API with keep-alive agent
+    const response = await fetch(url, { agent: httpAgent });
     const contentType = response.headers.get('content-type') || '';
     if (!response.ok) {
       const errText = contentType.includes('application/json')
@@ -132,10 +130,11 @@ export default async function handler(req, res) {
     }
 
     // Store in cache
-    setCache(cacheKey, mapped);
+    await setCache(cacheKey, mapped);
 
     // Respond
     return res.status(200).json({ post: mapped });
+
   } catch (error) {
     console.error('Fetch failed:', error);
     return res.status(500).json({ error: 'Internal server error' });
