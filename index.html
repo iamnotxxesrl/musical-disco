@@ -4,61 +4,313 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gelbooru Viewer</title>
-  <link rel="preconnect" href="/api/images">
-  <!-- Place CSS in a separate file for production -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Pacifico&display=swap" rel="stylesheet">
   <style>
-    body { font-family:'Segoe UI',sans-serif; margin:0; background:#111; color:#fff; transition:background 0.3s, color 0.3s; }
-    body.light { background:#fff; color:#222; }
-    header { padding:1rem; background:#222; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; }
-    body.light header { background:#eee; }
-    header input, header button, header select { padding:0.5em; font-size:1em; border:none; border-radius:4px; }
-    header input { background:#333; color:#fff; flex:1 1 200px; }
-    body.light header input { background:#f4f4f4; color:#222; }
-    header button, header select { background:#444; color:#fff; cursor:pointer; }
-    body.light header button, body.light header select { background:#ddd; color:#222; }
-    header button:hover, header select:hover { background:#666; }
-    body.light header button:hover, body.light header select:hover { background:#bbb; }
-    .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; padding:1rem; }
-    .thumb { position:relative; overflow:hidden; border-radius:10px; cursor:pointer; transition:transform 0.3s; background:#1e1e1e; will-change:transform; }
-    .thumb:hover { transform:scale(1.03); }
-    .thumb img { width:100%; height:220px; object-fit:cover; user-select:none; }
-    .tags { position:absolute; bottom:0; width:100%; background:rgba(0,0,0,0.6); color:#ccc; font-size:12px; padding:6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    #slideshow { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.98); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
-    #slideshow.show { display:flex; }
-    #slideImg { max-width:90vw; max-height:85vh; border-radius:12px; box-shadow:0 0 30px #000; transition:opacity 0.4s ease; user-select:none; touch-action:pan-y; }
-    #slideTags { color:#ccc; margin-top:0.7rem; max-width:80vw; text-align:center; word-wrap:break-word; user-select:text; }
-    .slideshow-controls { margin-top:0.8rem; display:flex; gap:0.5rem; }
-    .slideshow-controls button { background:#444; color:#fff; border:none; padding:0.5rem 1rem; border-radius:8px; font-size:1.2rem; cursor:pointer; transition:background-color 0.3s; }
-    .slideshow-controls button:hover { background:#666; }
-    .info, .stats { text-align:center; color:#aaa; margin:1rem; font-size:14px; }
-    .modal { display:none; position:fixed; z-index:2000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; }
-    .modal.show { display:flex; }
-    .modal-content { background:#222; color:#fff; padding:2rem; border-radius:10px; max-width:90vw; max-height:90vh; overflow:auto; }
-    body.light .modal-content { background:#fff; color:#222; }
-    .suggestions { position:absolute; background:#333; color:#fff; border-radius:0 0 5px 5px; z-index:500; max-height:160px; overflow:auto; width:100%; left:0; top:100%; }
-    .suggestion-item { padding:0.5em; cursor:pointer; }
-    .suggestion-item:hover, .suggestion-item.active { background:#555; }
-    body.light .suggestions { background:#eee; color:#222; }
-    body.light .suggestion-item:hover, body.light .suggestion-item.active { background:#bbb; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: linear-gradient(120deg, #190021 0%, #2d0036 100%);
+      color: #fff;
+      transition: background 0.3s, color 0.3s;
+      min-height: 100vh;
+    }
+    header {
+      padding: 1rem;
+      background: linear-gradient(90deg, #2d0036 0%, #ff2a68 100%);
+      border-bottom: 3px solid #ff2a68;
+      box-shadow: 0 2px 16px #ff2a6833;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2em;
+    }
+    .stats {
+      color: #e75480;
+      font-size: 1.1em;
+      font-family: 'Pacifico', cursive;
+      text-shadow: 0 0 8px #e75480bb;
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+    }
+    .stats::before {
+      content: "💋";
+      font-size: 1.2em;
+      vertical-align: middle;
+    }
+    header input, header button, header select {
+      padding: 0.5em;
+      font-size: 1em;
+      border: none;
+      border-radius: 999px;
+      margin: 0 0.2em;
+    }
+    header input {
+      background: #1a001d;
+      color: #fff;
+      border: 1.5px solid #e75480;
+      font-family: 'Segoe UI', sans-serif;
+      transition: box-shadow 0.2s;
+      box-shadow: 0 0 6px #e7548077;
+    }
+    header input:focus {
+      box-shadow: 0 0 18px #ff2a6877;
+      outline: none;
+    }
+    header button, header select {
+      background: #e75480;
+      color: #fff;
+      font-weight: bold;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+      box-shadow: 0 0 10px #e7548077;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    header button:hover, header select:hover {
+      background: #ff7eb9;
+      box-shadow: 0 0 30px #ff2a68cc;
+      transform: scale(1.08);
+    }
+    #toggleTheme {
+      background: #111;
+      color: #ff7eb9;
+      border: 2px solid #e75480;
+      box-shadow: 0 0 8px #e75480cc;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+    #toggleTheme:hover {
+      background: #ff7eb9;
+      color: #111;
+      box-shadow: 0 0 16px #e75480;
+    }
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 18px;
+      padding: 1.5rem;
+    }
+    .thumb {
+      position: relative;
+      overflow: hidden;
+      border-radius: 24px;
+      cursor: pointer;
+      transition: transform 0.25s, box-shadow 0.25s, border 0.2s;
+      background: #1e1e1e;
+      border: 2.5px solid transparent;
+      box-shadow: 0 0 16px #8f5fff66;
+      will-change: transform;
+    }
+    .thumb:hover {
+      transform: scale(1.06) rotate(-2deg);
+      border: 2.5px solid #e75480;
+      box-shadow: 0 0 40px #ff2a6888;
+      z-index: 2;
+      animation: shake 0.25s;
+    }
+    @keyframes shake {
+      0% { transform: scale(1.06) rotate(-2deg) }
+      25% { transform: scale(1.07) rotate(2deg) }
+      50% { transform: scale(1.06) rotate(-2deg) }
+      75% { transform: scale(1.07) rotate(2deg) }
+      100% { transform: scale(1.06) rotate(-2deg) }
+    }
+    .thumb img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      border-radius: 22px;
+      filter: brightness(0.92) contrast(1.05);
+      transition: filter 0.2s;
+    }
+    .thumb:hover img {
+      filter: brightness(1.04) blur(1px) contrast(1.15);
+    }
+    .tags {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      background: linear-gradient(0deg, #e75480cc 0%, #00000000 100%);
+      color: #fff;
+      font-size: 1.1em;
+      padding: 7px;
+      box-sizing: border-box;
+      border-radius: 0 0 22px 22px;
+      letter-spacing: 0.05em;
+      font-family: 'Pacifico', cursive;
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+    }
+    .tags::before {
+      content: "✨";
+      color: #ffb3d2;
+      margin-right: 0.3em;
+    }
+    #slideshow {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(29,0,39,0.97);
+      backdrop-filter: blur(8px);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      animation: fadeIn 0.5s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0;}
+      to { opacity: 1;}
+    }
+    #slideshow.show { display: flex; }
+    #slideImg {
+      max-width: 90vw;
+      max-height: 85vh;
+      border-radius: 18px;
+      box-shadow: 0 0 36px #e7548077;
+      border: 3px solid #ff2a68;
+      transition: opacity 0.3s;
+    }
+    #slideTags {
+      color: #ffb3d2;
+      margin-top: 1rem;
+      max-width: 80vw;
+      text-align: center;
+      font-size: 1.1em;
+      word-wrap: break-word;
+      text-shadow: 0 0 8px #e75480bb;
+      font-family: 'Pacifico', cursive;
+      letter-spacing: 0.05em;
+    }
+    .slideshow-controls {
+      margin-top: 0.8rem;
+      display: flex;
+      gap: 1rem;
+    }
+    .slideshow-controls button {
+      background: #e75480;
+      color: #fff;
+      border: none;
+      padding: 0.7rem 1.5rem;
+      border-radius: 999px;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 0 12px #e75480bb;
+    }
+    .slideshow-controls button:hover {
+      background: #ff7eb9;
+      transform: scale(1.1);
+      box-shadow: 0 0 28px #e75480cc;
+    }
+    .info {
+      text-align: center;
+      color: #ff7eb9;
+      margin: 1.2rem;
+      font-size: 16px;
+      font-family: 'Playfair Display', serif;
+      text-shadow: 0 0 6px #e75480cc;
+    }
+    .modal { 
+      display: none; 
+      position: fixed; 
+      z-index: 2000; 
+      left: 0; top: 0; 
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.7); 
+      align-items: center; 
+      justify-content: center;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: rgba(30,0,50,0.97);
+      color: #fff;
+      padding: 2rem;
+      border-radius: 20px;
+      border: 2.5px solid #ff2a68;
+      box-shadow: 0 0 32px #e75480bb;
+      max-width: 90vw;
+      max-height: 90vh;
+      overflow: auto;
+    }
+    h2 {
+      font-family: 'Playfair Display', serif;
+      letter-spacing: 0.08em;
+      color: #ff7eb9;
+      text-shadow: 0 0 6px #e75480cc;
+      margin-top: 0;
+    }
+    .suggestions {
+      position: absolute; 
+      background: #333; 
+      color: #fff; 
+      border-radius: 0 0 5px 5px; 
+      z-index: 500; 
+      max-height: 160px; 
+      overflow: auto; 
+      width: 100%; 
+      left: 0; 
+      top: 100%;
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 1em;
+      box-shadow: 0 3px 12px #e75480aa;
+    }
+    .suggestion-item { padding: 0.5em; cursor: pointer; }
+    .suggestion-item:hover, .suggestion-item.active { background: #ff7eb9; color: #222; }
+    /* Responsive */
     @media (max-width:600px) {
-      header { flex-direction:column; }
-      .thumb img { height:160px; }
+      header { flex-direction: column; }
+      .thumb img { height: 160px; }
+      .modal-content { padding: 1em; }
+    }
+    /* Neon Floating Hearts (optional, uncomment for more spice) */
+    /* 
+    body::after {
+      content: "";
+      position: fixed;
+      left: 20vw; top: 10vh;
+      width: 60vw; height: 80vh;
+      background: url('https://svgshare.com/i/14RH.svg') repeat;
+      opacity: 0.06;
+      pointer-events: none;
+      z-index: 0;
+      animation: floatHearts 8s linear infinite alternate;
+    }
+    @keyframes floatHearts {
+      from { background-position: 0 0; }
+      to { background-position: 40px 40px; }
+    }
+    */
+    /* Footer */
+    footer {
+      text-align: center;
+      color: #ff7eb9;
+      font-family: 'Pacifico', cursive;
+      font-size: 1.2em;
+      margin: 2em 0 1em 0;
+      text-shadow: 0 0 8px #e75480;
+      user-select: none;
+      letter-spacing: 0.03em;
     }
   </style>
 </head>
 <body>
   <header>
     <div style="display:flex; gap:0.5rem; flex-wrap:wrap; flex:1; position:relative;">
-      <input id="searchInput" placeholder="Search tags…" aria-label="Search tags" autocomplete="off" aria-autocomplete="list"/>
+      <input id="searchInput" placeholder="Search for your next waifu…" aria-label="Search tags" autocomplete="off" aria-autocomplete="list"/>
       <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggested tags"></div>
-      <button id="searchBtn" aria-label="Search images by tags">Search</button>
+      <button id="searchBtn" aria-label="Search images by tags">🔎 Search</button>
       <select id="sortSelect" aria-label="Sort images">
         <option value="date">Sort by Date</option>
         <option value="popular">Sort by Popularity</option>
         <option value="random">Random</option>
       </select>
-      <button id="favoritesBtn" aria-label="Show favorites">Favorites</button>
-      <button id="clearFavs" aria-label="Clear all favorites">Clear Favorites</button>
+      <button id="favoritesBtn" aria-label="Show favorites">❤️ Favorites</button>
+      <button id="clearFavs" aria-label="Clear all favorites">🗑️ Clear</button>
       <button id="toggleTheme" aria-label="Toggle dark and light mode">🌙/☀️</button>
     </div>
     <div class="stats" id="viewStats" aria-live="polite">Waifus seen: 0</div>
@@ -73,7 +325,7 @@
     <div class="slideshow-controls">
       <button id="prevSlide" aria-label="Previous image">⏪</button>
       <button id="nextSlide" aria-label="Next image">⏩</button>
-      <button id="favoriteSlide" aria-label="Favorite this image">❤️</button>
+      <button id="favoriteSlide" aria-label="Favorite this image">💖</button>
       <button id="closeSlideshow" aria-label="Close slideshow">❌</button>
     </div>
   </div>
@@ -84,7 +336,10 @@
       <button id="closeFavs" aria-label="Close favorites modal">Close</button>
     </div>
   </div>
-  <!-- Place JS in a separate file for production -->
+  <!-- Optional Easter Egg: Press ↑ ↑ ↓ ↓ ← → ← → B A for a surprise! -->
+  <footer>
+    Made with ❤️ for waifu lovers &mdash; <span style="color:#fff3;">SLIGHTLY CHILLED WATER</span>
+  </footer>
   <script defer>
     // Theme toggle
     const toggleTheme = document.getElementById('toggleTheme');
@@ -115,7 +370,6 @@
 
     function updateStats() {
       stats.textContent = `Waifus seen: ${seen}`;
-      saveCookie('waifus_seen', seen);
     }
 
     async function fetchTagsSuggest(query) {
@@ -243,8 +497,8 @@
       let favs = [];
       try { favs = JSON.parse(loadCookie('favorites')||'[]'); } catch{}
       const idx = favs.findIndex(a=>a.id===p.id);
-      if (idx>=0) { favs.splice(idx,1); showModal('Favorites', 'Removed from favorites.'); }
-      else { favs.push(p); showModal('Favorites', 'Added to favorites.'); }
+      if (idx>=0) { favs.splice(idx,1); showModal('Favorites', 'Removed from favorites 🥺'); }
+      else { favs.push(p); showModal('Favorites', 'Added to your harem 💖'); }
       saveCookie('favorites', JSON.stringify(favs));
       updateFavoritesGallery();
     }
@@ -265,7 +519,7 @@
     function updateFavoritesGallery() {
       let favs=[];
       try { favs=JSON.parse(loadCookie('favorites')||'[]'); } catch{}
-      if(!favs.length){ favoritesGallery.innerHTML='<div style="padding:1em">No favorites</div>'; return; }
+      if(!favs.length){ favoritesGallery.innerHTML='<div style="padding:1em">Your harem is empty 🥺 Add some waifus!</div>'; return; }
       favoritesGallery.innerHTML='';
       favs.forEach((post, idx) => {
         const div = document.createElement('div');
@@ -296,7 +550,7 @@
     });
     document.getElementById('favoritesBtn').addEventListener('click', showFavorites);
     document.getElementById('clearFavs').addEventListener('click', () => {
-      saveCookie('favorites','[]'); showModal('Favorites','Cleared all favorites.');
+      saveCookie('favorites','[]'); showModal('Favorites','Cleared all favorites 🗑️');
       updateFavoritesGallery();
     });
     document.getElementById('prevSlide').addEventListener('click', () => showSlide((currentSlide-1+images.length)%images.length));
@@ -354,6 +608,21 @@
       }
       touchStartX = touchEndX = touchStartY = touchEndY = 0;
     }, { passive: true });
+
+    // Easter Egg: Konami code for a surprise (optional, can add your own)
+    const konami = [38,38,40,40,37,39,37,39,66,65];
+    let konamiIndex = 0;
+    window.addEventListener('keydown', function(e) {
+      if (e.keyCode === konami[konamiIndex]) {
+        konamiIndex++;
+        if (konamiIndex === konami.length) {
+          alert('✨ You unlocked Ultra Waifu Mode! (Add your own effect here!)');
+          konamiIndex = 0;
+        }
+      } else {
+        konamiIndex = 0;
+      }
+    });
   </script>
 </body>
 </html>
