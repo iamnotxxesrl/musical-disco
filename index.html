@@ -4,21 +4,26 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gelbooru Viewer</title>
-  <!-- Preconnect for faster API calls -->
   <link rel="preconnect" href="/api/images">
+  <!-- Place CSS in a separate file for production -->
   <style>
-    body { font-family:'Segoe UI',sans-serif; margin:0; background:#111; color:#fff; }
+    body { font-family:'Segoe UI',sans-serif; margin:0; background:#111; color:#fff; transition:background 0.3s, color 0.3s; }
+    body.light { background:#fff; color:#222; }
     header { padding:1rem; background:#222; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; }
-    header input, header button { padding:0.5em; font-size:1em; border:none; border-radius:4px; }
-    header input { background:#333; color:#fff; flex:1 1 250px; }
-    header button { background:#444; color:#fff; cursor:pointer; }
-    header button:hover { background:#666; }
+    body.light header { background:#eee; }
+    header input, header button, header select { padding:0.5em; font-size:1em; border:none; border-radius:4px; }
+    header input { background:#333; color:#fff; flex:1 1 200px; }
+    body.light header input { background:#f4f4f4; color:#222; }
+    header button, header select { background:#444; color:#fff; cursor:pointer; }
+    body.light header button, body.light header select { background:#ddd; color:#222; }
+    header button:hover, header select:hover { background:#666; }
+    body.light header button:hover, body.light header select:hover { background:#bbb; }
     .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; padding:1rem; }
     .thumb { position:relative; overflow:hidden; border-radius:10px; cursor:pointer; transition:transform 0.3s; background:#1e1e1e; will-change:transform; }
     .thumb:hover { transform:scale(1.03); }
     .thumb img { width:100%; height:220px; object-fit:cover; user-select:none; }
     .tags { position:absolute; bottom:0; width:100%; background:rgba(0,0,0,0.6); color:#ccc; font-size:12px; padding:6px; box-sizing:border-box; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    #slideshow { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.98); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:100; }
+    #slideshow { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.98); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:1000; }
     #slideshow.show { display:flex; }
     #slideImg { max-width:90vw; max-height:85vh; border-radius:12px; box-shadow:0 0 30px #000; transition:opacity 0.4s ease; user-select:none; touch-action:pan-y; }
     #slideTags { color:#ccc; margin-top:0.7rem; max-width:80vw; text-align:center; word-wrap:break-word; user-select:text; }
@@ -26,6 +31,15 @@
     .slideshow-controls button { background:#444; color:#fff; border:none; padding:0.5rem 1rem; border-radius:8px; font-size:1.2rem; cursor:pointer; transition:background-color 0.3s; }
     .slideshow-controls button:hover { background:#666; }
     .info, .stats { text-align:center; color:#aaa; margin:1rem; font-size:14px; }
+    .modal { display:none; position:fixed; z-index:2000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; }
+    .modal.show { display:flex; }
+    .modal-content { background:#222; color:#fff; padding:2rem; border-radius:10px; max-width:90vw; max-height:90vh; overflow:auto; }
+    body.light .modal-content { background:#fff; color:#222; }
+    .suggestions { position:absolute; background:#333; color:#fff; border-radius:0 0 5px 5px; z-index:500; max-height:160px; overflow:auto; width:100%; left:0; top:100%; }
+    .suggestion-item { padding:0.5em; cursor:pointer; }
+    .suggestion-item:hover, .suggestion-item.active { background:#555; }
+    body.light .suggestions { background:#eee; color:#222; }
+    body.light .suggestion-item:hover, body.light .suggestion-item.active { background:#bbb; }
     @media (max-width:600px) {
       header { flex-direction:column; }
       .thumb img { height:160px; }
@@ -34,76 +48,150 @@
 </head>
 <body>
   <header>
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; flex:1;">
-      <input id="searchInput" placeholder="Search tags…" aria-label="Search tags"/>
-      <button id="searchBtn">Search</button>
-      <button id="favoritesBtn">Favorites</button>
-      <button id="clearFavs">Clear Favorites</button>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; flex:1; position:relative;">
+      <input id="searchInput" placeholder="Search tags…" aria-label="Search tags" autocomplete="off" aria-autocomplete="list"/>
+      <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggested tags"></div>
+      <button id="searchBtn" aria-label="Search images by tags">Search</button>
+      <select id="sortSelect" aria-label="Sort images">
+        <option value="date">Sort by Date</option>
+        <option value="popular">Sort by Popularity</option>
+        <option value="random">Random</option>
+      </select>
+      <button id="favoritesBtn" aria-label="Show favorites">Favorites</button>
+      <button id="clearFavs" aria-label="Clear all favorites">Clear Favorites</button>
+      <button id="toggleTheme" aria-label="Toggle dark and light mode">🌙/☀️</button>
     </div>
-    <div class="stats" id="viewStats">Waifus seen: 0</div>
+    <div class="stats" id="viewStats" aria-live="polite">Waifus seen: 0</div>
   </header>
   <main>
     <div class="gallery" id="gallery" role="list" aria-label="Image gallery"></div>
   </main>
   <div class="info">Uses cookies for favorites and stats. Infinite scroll enabled.</div>
-  <div id="slideshow" role="dialog" aria-modal="true" aria-label="Image slideshow">
+  <div id="slideshow" role="dialog" aria-modal="true" aria-label="Image slideshow" tabindex="-1">
     <img id="slideImg" alt="Slideshow image"/>
     <div id="slideTags"></div>
     <div class="slideshow-controls">
-      <button id="prevSlide">⏪</button>
-      <button id="nextSlide">⏩</button>
-      <button id="favoriteSlide">❤️</button>
-      <button id="closeSlideshow">❌</button>
+      <button id="prevSlide" aria-label="Previous image">⏪</button>
+      <button id="nextSlide" aria-label="Next image">⏩</button>
+      <button id="favoriteSlide" aria-label="Favorite this image">❤️</button>
+      <button id="closeSlideshow" aria-label="Close slideshow">❌</button>
     </div>
   </div>
-
-  <!-- Defer script for non-blocking load -->
+  <div id="favoritesModal" class="modal" role="dialog" aria-modal="true" aria-label="Favorites">
+    <div class="modal-content">
+      <h2>Favorites</h2>
+      <div id="favoritesGallery" class="gallery"></div>
+      <button id="closeFavs" aria-label="Close favorites modal">Close</button>
+    </div>
+  </div>
+  <!-- Place JS in a separate file for production -->
   <script defer>
-    let page = 0, seen = 0, currentTags = '', images = [], currentSlide = 0, isLoading = false;
+    // Theme toggle
+    const toggleTheme = document.getElementById('toggleTheme');
+    toggleTheme.addEventListener('click', () => {
+      document.body.classList.toggle('light');
+      saveCookie('theme', document.body.classList.contains('light') ? 'light' : 'dark');
+    });
+    // Restore theme
+    function saveCookie(k, v) { document.cookie = `${k}=${encodeURIComponent(v)};path=/;max-age=31536000`; }
+    function loadCookie(k) {
+      const re = new RegExp('(^| )'+k+'=([^;]+)');
+      const m = document.cookie.match(re);
+      return m ? decodeURIComponent(m[2]) : null;
+    }
+    if (loadCookie('theme') === 'light') document.body.classList.add('light');
+
+    let page = 0, seen = 0, currentTags = '', images = [], currentSlide = 0, isLoading = false, currentSort='date';
     const batchSize = 20;
     const gallery = document.getElementById('gallery'),
           slideImg = document.getElementById('slideImg'),
           slideTags = document.getElementById('slideTags'),
           stats = document.getElementById('viewStats'),
-          slideshow = document.getElementById('slideshow');
+          slideshow = document.getElementById('slideshow'),
+          sortSelect = document.getElementById('sortSelect'),
+          suggestionsBox = document.getElementById('suggestions'),
+          favoritesModal = document.getElementById('favoritesModal'),
+          favoritesGallery = document.getElementById('favoritesGallery');
 
-    const saveCookie = (k, v) => document.cookie = `${k}=${encodeURIComponent(v)};path=/;max-age=31536000`;
-    const loadCookie = k => {
-      const re = new RegExp('(^| )'+k+'=([^;]+)');
-      const m = document.cookie.match(re);
-      return m ? decodeURIComponent(m[2]) : null;
-    };
-
-    const updateStats = () => {
+    function updateStats() {
       stats.textContent = `Waifus seen: ${seen}`;
       saveCookie('waifus_seen', seen);
-    };
+    }
+
+    async function fetchTagsSuggest(query) {
+      // Example stub for suggestions
+      if (!query) return [];
+      // Replace with actual backend endpoint for real suggestions
+      return ['catgirl', 'doggirl', 'maid', 'bunny', 'foxgirl', 'elf'].filter(t => t.includes(query.toLowerCase()));
+    }
+
+    let suggestActive = -1;
+    document.getElementById('searchInput').addEventListener('input', async function(e) {
+      const value = this.value.trim();
+      const suggestions = await fetchTagsSuggest(value);
+      suggestionsBox.innerHTML = '';
+      suggestActive = -1;
+      if (suggestions.length && value) {
+        suggestionsBox.style.display = 'block';
+        suggestions.forEach((s, i) => {
+          const div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.textContent = s;
+          div.setAttribute('role', 'option');
+          div.addEventListener('mousedown', function() {
+            document.getElementById('searchInput').value = s;
+            suggestionsBox.innerHTML = '';
+          });
+          suggestionsBox.appendChild(div);
+        });
+      } else {
+        suggestionsBox.style.display = 'none';
+      }
+    });
+    document.getElementById('searchInput').addEventListener('keydown', function(e) {
+      const items = suggestionsBox.querySelectorAll('.suggestion-item');
+      if (!items.length) return;
+      if (e.key === 'ArrowDown') {
+        suggestActive = (suggestActive + 1) % items.length;
+      } else if (e.key === 'ArrowUp') {
+        suggestActive = (suggestActive - 1 + items.length) % items.length;
+      } else if (e.key === 'Enter') {
+        if (suggestActive >= 0) {
+          e.preventDefault();
+          items[suggestActive].dispatchEvent(new Event('mousedown'));
+        }
+      }
+      items.forEach((item, idx) => item.classList.toggle('active', idx === suggestActive));
+    });
+    document.addEventListener('click', () => suggestionsBox.innerHTML = '');
+
+    sortSelect.addEventListener('change', () => {
+      currentSort = sortSelect.value;
+      page = 0; fetchImages(currentTags, false);
+    });
 
     async function fetchImages(tags = currentTags, append = false) {
       if (isLoading) return;
       isLoading = true;
       try {
-        // Cache busting parameter to avoid stale images
         const cacheBust = `&_=${Date.now()}`;
-        const res = await fetch(`/api/images?tags=${encodeURIComponent(tags)}&page=${page}&limit=${batchSize}${cacheBust}`);
+        const res = await fetch(`/api/images?tags=${encodeURIComponent(tags)}&page=${page}&limit=${batchSize}&sort=${currentSort}${cacheBust}`);
         if (!res.ok) throw new Error('Fetch failure: '+res.status);
         const data = await res.json();
         const posts = Array.isArray(data.post) ? data.post : [];
         if (!append) images = [];
         images = images.concat(posts);
         renderImages(posts, append);
-        if (!append) window.addEventListener('scroll', onScroll, { passive: true }); // passive for better perf
+        if (!append) window.addEventListener('scroll', onScroll, { passive: true });
         if (posts.length === 0) window.removeEventListener('scroll', onScroll);
       } catch(e) {
-        console.error(e);
-        alert('Error loading images');
+        showModal('Error', 'Error loading images. Please try again.');
       } finally {
         isLoading = false;
       }
     }
 
     function renderImages(posts, append) {
-      // Batch DOM updates using DocumentFragment for performance
       const frag = document.createDocumentFragment();
       posts.forEach(post => {
         const div = document.createElement('div');
@@ -112,7 +200,7 @@
         const img = document.createElement('img');
         img.src = post.preview_url || post.sample_url || '';
         img.alt = post.tags || 'Image';
-        img.loading = "lazy"; // Native lazy loading!
+        img.loading = "lazy";
         const tagDiv = document.createElement('div');
         tagDiv.className = 'tags';
         tagDiv.textContent = post.tags.split(' ').slice(0,4).join(', ');
@@ -125,7 +213,6 @@
       updateStats();
     }
 
-    // Efficient event delegation for gallery clicks & keydowns
     gallery.addEventListener('click', e => {
       const thumb = e.target.closest('.thumb');
       if (thumb) showSlide(Array.prototype.indexOf.call(gallery.children, thumb));
@@ -146,6 +233,7 @@
       slideTags.textContent = p.tags;
       slideshow.classList.add('show');
       slideshow.focus();
+      slideImg.focus();
     }
     const closeSlide = () => slideshow.classList.remove('show');
 
@@ -155,18 +243,52 @@
       let favs = [];
       try { favs = JSON.parse(loadCookie('favorites')||'[]'); } catch{}
       const idx = favs.findIndex(a=>a.id===p.id);
-      if (idx>=0) { favs.splice(idx,1); alert('Removed'); }
-      else { favs.push(p); alert('Added'); }
+      if (idx>=0) { favs.splice(idx,1); showModal('Favorites', 'Removed from favorites.'); }
+      else { favs.push(p); showModal('Favorites', 'Added to favorites.'); }
       saveCookie('favorites', JSON.stringify(favs));
+      updateFavoritesGallery();
+    }
+
+    function showModal(title, content) {
+      favoritesModal.querySelector('h2').textContent = title;
+      favoritesGallery.innerHTML = `<div style="padding:1em">${content}</div>`;
+      favoritesModal.classList.add('show');
+      document.getElementById('closeFavs').focus();
     }
 
     function showFavorites() {
+      updateFavoritesGallery();
+      favoritesModal.classList.add('show');
+      document.getElementById('closeFavs').focus();
+    }
+
+    function updateFavoritesGallery() {
       let favs=[];
       try { favs=JSON.parse(loadCookie('favorites')||'[]'); } catch{}
-      if(!favs.length){ alert('No favorites'); return; }
-      images=favs; renderImages(favs,false);
-      window.removeEventListener('scroll', onScroll);
+      if(!favs.length){ favoritesGallery.innerHTML='<div style="padding:1em">No favorites</div>'; return; }
+      favoritesGallery.innerHTML='';
+      favs.forEach((post, idx) => {
+        const div = document.createElement('div');
+        div.className = 'thumb'; div.tabIndex=0;
+        div.role = 'listitem';
+        const img = document.createElement('img');
+        img.src = post.preview_url || post.sample_url || '';
+        img.alt = post.tags || 'Image';
+        img.loading = "lazy";
+        div.append(img);
+        div.addEventListener('click',()=>showFavSlide(idx));
+        favoritesGallery.appendChild(div);
+      });
+      function showFavSlide(i) {
+        images = favs;
+        showSlide(i);
+      }
     }
+
+    document.getElementById('closeFavs').addEventListener('click',()=>favoritesModal.classList.remove('show'));
+    document.getElementById('favoritesModal').addEventListener('click',e=>{
+      if(e.target===favoritesModal)favoritesModal.classList.remove('show');
+    });
 
     document.getElementById('searchBtn').addEventListener('click', () => {
       currentTags = document.getElementById('searchInput').value.trim();
@@ -174,7 +296,8 @@
     });
     document.getElementById('favoritesBtn').addEventListener('click', showFavorites);
     document.getElementById('clearFavs').addEventListener('click', () => {
-      saveCookie('favorites','[]'); alert('Cleared'); 
+      saveCookie('favorites','[]'); showModal('Favorites','Cleared all favorites.');
+      updateFavoritesGallery();
     });
     document.getElementById('prevSlide').addEventListener('click', () => showSlide((currentSlide-1+images.length)%images.length));
     document.getElementById('nextSlide').addEventListener('click', () => showSlide((currentSlide+1)%images.length));
@@ -182,6 +305,7 @@
     document.getElementById('closeSlideshow').addEventListener('click', closeSlide);
 
     window.addEventListener('keydown', e => {
+      if (favoritesModal.classList.contains('show') && e.key==='Escape') favoritesModal.classList.remove('show');
       if (!slideshow.classList.contains('show')) return;
       if (e.key==='Escape') return closeSlide();
       if (e.key==='ArrowRight') return showSlide((currentSlide+1)%images.length);
